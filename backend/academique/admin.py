@@ -23,12 +23,12 @@ class DepartementAdmin(admin.ModelAdmin):
 
 @admin.register(Licence)
 class LicenceAdmin(admin.ModelAdmin):
-    list_display = ['nom', 'code', 'departement', 'duree', 'date_creation']
+    list_display = ('nom', 'domaine', 'mention', 'parcours', 'duree', 'departement', 'date_creation')
     list_filter = ['departement', 'date_creation', 'date_modification']
-    search_fields = ['nom', 'code']
+    search_fields = ('nom', 'domaine', 'mention', 'parcours')
     fieldsets = (
         ('Informations générales', {
-            'fields': ('nom', 'code', 'duree', 'description')
+            'fields': ('nom', 'domaine', 'mention', 'parcours', 'duree', 'description')
         }),
         ('Affiliation', {
             'fields': ('departement',)

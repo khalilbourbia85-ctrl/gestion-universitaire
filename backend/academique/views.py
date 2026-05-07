@@ -79,12 +79,27 @@ class DepartementViewSet(viewsets.ModelViewSet):
         dept = serializer.save()
         if dept.email and dept.code:
             from django.contrib.auth.models import User
+            from enseignants.models import Enseignant
             user, created = User.objects.get_or_create(
                 username=dept.email,
                 defaults={'email': dept.email}
             )
             user.set_password(dept.code)
             user.save()
+            
+            Enseignant.objects.update_or_create(
+                email=dept.email,
+                defaults={
+                    'user': user,
+                    'nom': dept.responsable or 'Chef',
+                    'prenom': dept.nom[:20] if dept.nom else 'Département',
+                    'role': 'chef_departement',
+                    'departement': dept,
+                    'matricule': f"CHEF_{dept.id}",
+                    'dateRecrutement': '2020-01-01',
+                    'cin': f"CIN_{dept.id}"
+                }
+            )
 
     def perform_update(self, serializer):
         old_dept = self.get_object()
@@ -93,6 +108,7 @@ class DepartementViewSet(viewsets.ModelViewSet):
 
         if dept.email and dept.code:
             from django.contrib.auth.models import User
+            from enseignants.models import Enseignant
             user = None
             if old_email:
                 user = User.objects.filter(username=old_email).first()
@@ -104,6 +120,19 @@ class DepartementViewSet(viewsets.ModelViewSet):
                 user.email = dept.email
                 user.set_password(dept.code)
                 user.save()
+                
+                Enseignant.objects.update_or_create(
+                    user=user,
+                    defaults={
+                        'email': dept.email,
+                        'nom': dept.responsable or 'Chef',
+                        'prenom': dept.nom[:20] if dept.nom else 'Département',
+                        'role': 'chef_departement',
+                        'departement': dept,
+                        'dateRecrutement': '2020-01-01',
+                        'cin': f"CIN_{dept.id}"
+                    }
+                )
 
     @action(detail=False, methods=['post'], url_path='import-excel')
     def import_excel(self, request):
@@ -125,7 +154,10 @@ class SpecialiteViewSet(viewsets.ModelViewSet):
         if role == 'admin':
             return Specialite.objects.all()
         elif role == 'chef_departement' and enseignant.departement_id:
-            return Specialite.objects.filter(licence__departement_id=enseignant.departement_id)
+            return Specialite.objects.filter(
+                Q(licence__departement_id=enseignant.departement_id) | 
+                Q(licence__isnull=True)
+            )
         return Specialite.objects.none()
 
     @action(detail=False, methods=['post'], url_path='import-excel')
@@ -158,7 +190,10 @@ class LicenceViewSet(viewsets.ModelViewSet):
         if role == 'admin':
             return Licence.objects.all()
         elif role == 'chef_departement' and enseignant.departement_id:
-            return Licence.objects.filter(departement_id=enseignant.departement_id)
+            return Licence.objects.filter(
+                Q(departement_id=enseignant.departement_id) | 
+                Q(departement__isnull=True)
+            )
         return Licence.objects.none()
 
     @action(detail=False, methods=['post'], url_path='import-excel')
@@ -198,7 +233,9 @@ class ModuleViewSet(viewsets.ModelViewSet):
                 queryset = Module.objects.all()
             elif role == 'chef_departement' and departement:
                 queryset = Module.objects.filter(
-                    Q(licence__departement=departement) | Q(specialite__licence__departement=departement)
+                    Q(licence__departement=departement) | 
+                    Q(specialite__licence__departement=departement) |
+                    Q(licence__isnull=True)
                 ).distinct()
             else:
                 return Module.objects.none()

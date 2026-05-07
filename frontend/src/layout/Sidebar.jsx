@@ -17,7 +17,7 @@ import {
 
 import { NavLink, useLocation } from "react-router-dom";
 
-function Sidebar() {
+function Sidebar({ role }) {
   const location = useLocation();
   const pfeRoutes = ["/pfes", "/encadrants", "/rapporteurs", "/soutenances"];
   const isPfeSectionActive = pfeRoutes.includes(location.pathname);
@@ -131,17 +131,19 @@ function Sidebar() {
               <FaChevronDown className={`chevron ${academicOpen ? "open" : ""}`} />
             </button>
             <ul className={`submenu ${academicOpen ? "open" : ""}`}>
-              <li>
-                <NavLink
-                  to="/departements"
-                  className={({ isActive }) =>
-                    isActive ? "active-link" : ""
-                  }
-                >
-                  <FaUniversity />
-                  Gestion Départements
-                </NavLink>
-              </li>
+              {role === 'admin' && (
+                <li>
+                  <NavLink
+                    to="/departements"
+                    className={({ isActive }) =>
+                      isActive ? "active-link" : ""
+                    }
+                  >
+                    <FaUniversity />
+                    Gestion Départements
+                  </NavLink>
+                </li>
+              )}
               <li>
                 <NavLink
                   to="/licences"

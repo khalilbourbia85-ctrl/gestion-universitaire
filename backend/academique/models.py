@@ -9,6 +9,7 @@ class Departement(models.Model):
     responsable = models.CharField(max_length=255, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     telephone = models.CharField(max_length=20, blank=True, null=True)
+    photo = models.FileField(upload_to='departements_photos/', blank=True, null=True)
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
 
@@ -24,7 +25,9 @@ class Departement(models.Model):
 class Licence(models.Model):
     """Modèle pour gérer les licences académiques"""
     nom = models.CharField(max_length=255, unique=True)
-    code = models.CharField(max_length=50, unique=True)
+    domaine = models.CharField(max_length=255, blank=True, null=True)
+    mention = models.CharField(max_length=255, blank=True, null=True)
+    parcours = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     duree = models.CharField(max_length=50, default="3 ans")
     departement = models.ForeignKey(Departement, on_delete=models.CASCADE, related_name='licences')

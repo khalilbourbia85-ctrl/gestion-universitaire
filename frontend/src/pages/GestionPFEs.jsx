@@ -161,6 +161,8 @@ function GestionPFEs() {
         return String(item?.sujet || '').toLowerCase().includes(term);
       case 'Spécialité':
         return String(item?.specialite || '').toLowerCase().includes(term);
+      case 'Lieu de stage':
+        return String(item?.lieu_stage || '').toLowerCase().includes(term);
       case 'Encadrant':
         return String(item?.encadrant_detail?.nom || '').toLowerCase().includes(term) ||
           String(item?.encadrant_detail?.prenom || '').toLowerCase().includes(term);
@@ -171,6 +173,7 @@ function GestionPFEs() {
           String(item?.idPfe || '').toLowerCase().includes(term) ||
           String(item?.sujet || '').toLowerCase().includes(term) ||
           String(item?.specialite || '').toLowerCase().includes(term) ||
+          String(item?.lieu_stage || '').toLowerCase().includes(term) ||
           String(item?.encadrant_detail?.nom || '').toLowerCase().includes(term) ||
           String(item?.encadrant_detail?.prenom || '').toLowerCase().includes(term) ||
           String(item?.encadrant_detail?.typeContrat || '').toLowerCase().includes(term)
@@ -195,6 +198,7 @@ function GestionPFEs() {
       const payload = {
         sujet: data.sujet,
         duree: data.duree,
+        lieu_stage: data.lieu_stage,
         specialite: data.specialite,
         encadrant: data.encadrant,
         etudiants: data.etudiants,
@@ -627,6 +631,7 @@ function GestionPFEs() {
             <option>Tous les champs</option>
             <option>ID PFE</option>
             <option>Sujet</option>
+            <option>Lieu de stage</option>
             <option>Spécialité</option>
             <option>Encadrant</option>
             <option>Type contrat enc.</option>

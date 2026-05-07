@@ -49,10 +49,12 @@ const GestionLicences = () => {
     if (searchTerm) {
       filtered = filtered.filter(lic => {
         switch (filterBy) {
-          case 'Nom':
+          case 'Mention':
             return lic.nom.toLowerCase().includes(searchTerm.toLowerCase());
-          case 'Code':
-            return lic.code.toLowerCase().includes(searchTerm.toLowerCase());
+          case 'Domaine':
+            return lic.domaine && lic.domaine.toLowerCase().includes(searchTerm.toLowerCase());
+          case 'Parcours':
+            return lic.parcours && lic.parcours.toLowerCase().includes(searchTerm.toLowerCase());
           case 'Département':
             return lic.departement_nom && lic.departement_nom.toLowerCase().includes(searchTerm.toLowerCase());
           default:
@@ -149,8 +151,9 @@ const GestionLicences = () => {
           <div className="filter-group">
             <label>Filtrer par:</label>
             <select value={filterBy} onChange={(e) => setFilterBy(e.target.value)}>
-              <option value="Nom">Nom</option>
-              <option value="Code">Code</option>
+              <option value="Mention">Mention</option>
+              <option value="Domaine">Domaine</option>
+              <option value="Parcours">Parcours</option>
               <option value="Département">Département</option>
             </select>
           </div>

@@ -28,3 +28,36 @@ class CustomAuthToken(ObtainAuthToken):
             'user_id': user.pk,
             'email': user.email
         })
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        old_password = request.data.get('old_password')
+        new_password = request.data.get('new_password')
+
+        if not old_password or not new_password:
+            return Response({'error': 'Ancien et nouveau mots de passe requis.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not user.check_password(old_password):
+            return Response({'error': 'Ancien mot de passe incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.save()
+
+        # Update departement code if user is a chef_departement
+        if hasattr(user, 'enseignant') and user.enseignant.role == 'chef_departement' and user.enseignant.departement:
+            try:
+                dept = user.enseignant.departement
+                dept.code = new_password
+                dept.save()
+            except Exception as e:
+                # Catch potential IntegrityError since 'code' is unique=True
+                return Response({'error': 'Erreur lors de la mise à jour du code département. Ce mot de passe/code est peut-être déjà utilisé par un autre département.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'message': 'Mot de passe modifié avec succès.'})

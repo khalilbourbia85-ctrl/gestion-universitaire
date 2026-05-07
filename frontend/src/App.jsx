@@ -18,8 +18,8 @@ import GestionLicences from "./pages/GestionLicences";
 import GestionModules from "./pages/GestionModules";
 
 function App() {
-  const [token, setToken] = useState(localStorage.getItem("token"));
-  const [role, setRole] = useState(localStorage.getItem("role"));
+  const [token, setToken] = useState(null);
+  const [role, setRole] = useState(null);
 
   useEffect(() => {
     if (token) {
@@ -33,7 +33,7 @@ function App() {
 
 return (
 
-<Layout>
+<Layout role={role}>
 
 
 
@@ -56,7 +56,7 @@ return (
 
 <Route path="/soutenances" element={<GestionSoutenances />} />
 
-<Route path="/departements" element={<GestionDepartements />} />
+{role === 'admin' && <Route path="/departements" element={<GestionDepartements role={role} />} />}
 
 <Route path="/licences" element={<GestionLicences />} />
 

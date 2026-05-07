@@ -14,6 +14,17 @@ class Etudiant(models.Model):
     dateNaissance = models.DateField()
     adresse = models.CharField(max_length=100)
 
+    SITUATION_CHOICES = [
+        ('N', 'Nouveau'),
+        ('R', 'Redoublant'),
+    ]
+    situation = models.CharField(
+        max_length=1, 
+        choices=SITUATION_CHOICES, 
+        default='N'
+    )
+    groupe = models.CharField(max_length=50, null=True, blank=True)
+
     licence = models.ForeignKey(
         'academique.Licence',
         on_delete=models.SET_NULL,
@@ -28,6 +39,23 @@ class Etudiant(models.Model):
         blank=True,
         related_name='etudiants',
     )
+
+    def delete(self, *args, **kwargs):
+        # Delete the PFE completely if the student is deleted
+        try:
+            if hasattr(self, 'pfe_assignment') and self.pfe_assignment and self.pfe_assignment.pfe:
+                self.pfe_assignment.pfe.delete()
+        except Exception:
+            pass
+        
+        # Delete any remaining soutenances linked to this student
+        try:
+            for soutenance in self.soutenances.all():
+                soutenance.delete()
+        except Exception:
+            pass
+            
+        super().delete(*args, **kwargs)
 
     def __str__(self):
         return f"{self.nom} {self.prenom}"

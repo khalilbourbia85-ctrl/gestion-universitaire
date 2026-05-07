@@ -79,6 +79,7 @@ class PFESerializer(serializers.ModelSerializer):
             'encadrant',
             'encadrant_detail',
             'date_affectation',
+            'lieu_stage',
             'convention_file',
             'lettre_affectation_file',
         ]

@@ -128,8 +128,8 @@ export default function DashboardPFE() {
               <h3>Répartition des Soutenances par Salle</h3>
               <div className="chart-wrapper">
                 {chartData.salles.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData.salles}>
+                  <div style={{ width: '100%', overflowX: 'auto' }}>
+                    <BarChart width={500} height={300} data={chartData.salles}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} />
                       <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
@@ -140,7 +140,7 @@ export default function DashboardPFE() {
                         ))}
                       </Bar>
                     </BarChart>
-                  </ResponsiveContainer>
+                  </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#6b7280' }}>
                     Aucune donnée disponible
@@ -153,8 +153,8 @@ export default function DashboardPFE() {
               <h3>PFEs par Spécialité</h3>
               <div className="chart-wrapper">
                 {chartData.specialites.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <PieChart width={400} height={300}>
                       <Pie
                         data={chartData.specialites}
                         cx="50%"
@@ -171,7 +171,7 @@ export default function DashboardPFE() {
                       </Pie>
                       <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)'}} />
                     </PieChart>
-                  </ResponsiveContainer>
+                  </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#6b7280' }}>
                     Aucune donnée disponible

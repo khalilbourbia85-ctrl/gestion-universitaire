@@ -7,7 +7,7 @@ class DepartementSerializer(serializers.ModelSerializer):
         model = Departement
         fields = [
             'id', 'nom', 'code', 'description', 'responsable',
-            'email', 'telephone', 'date_creation', 'date_modification'
+            'email', 'telephone', 'photo', 'date_creation', 'date_modification'
         ]
 
 
@@ -17,7 +17,7 @@ class LicenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Licence
         fields = [
-            'id', 'nom', 'code', 'description', 'duree', 'departement',
+            'id', 'nom', 'domaine', 'mention', 'parcours', 'description', 'duree', 'departement',
             'departement_nom', 'date_creation', 'date_modification'
         ]
 

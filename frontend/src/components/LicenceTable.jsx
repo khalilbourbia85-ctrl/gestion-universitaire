@@ -8,8 +8,9 @@ const LicenceTable = ({ licences, onEdit, onDelete }) => {
       <thead>
         <tr>
           <th>ID</th>
-          <th>Nom</th>
-          <th>Code</th>
+          <th>Mention</th>
+          <th>Domaine</th>
+          <th>Parcours</th>
           <th>Département</th>
           <th>Durée</th>
           <th>Actions</th>
@@ -21,7 +22,8 @@ const LicenceTable = ({ licences, onEdit, onDelete }) => {
             <tr key={lic.id}>
               <td>{lic.id}</td>
               <td>{lic.nom}</td>
-              <td>{lic.code}</td>
+              <td>{lic.domaine}</td>
+              <td>{lic.parcours}</td>
               <td>{lic.departement_nom}</td>
               <td>{lic.duree}</td>
               <td className="actions">
@@ -48,7 +50,7 @@ const LicenceTable = ({ licences, onEdit, onDelete }) => {
           ))
         ) : (
           <tr>
-            <td colSpan="6" className="empty">Aucune licence trouvée</td>
+            <td colSpan="7" className="empty">Aucune licence trouvée</td>
           </tr>
         )}
       </tbody>

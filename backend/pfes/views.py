@@ -255,7 +255,9 @@ class PFEViewSet(viewsets.ModelViewSet):
             return qs.filter(
                 Q(encadrant__departement=departement) |
                 Q(etudiants__licence__departement=departement) |
-                Q(etudiants__specialite__licence__departement=departement)
+                Q(etudiants__specialite__licence__departement=departement) |
+                Q(encadrant__departement__isnull=True) |
+                Q(etudiants__licence__isnull=True)
             ).distinct()
         
         # Un enseignant simple ne voit que les PFE qu'il encadre
@@ -321,7 +323,9 @@ class SoutenanceViewSet(viewsets.ModelViewSet):
                 Q(encadrant__departement=departement) | 
                 Q(rapporteur__departement=departement) |
                 Q(etudiants__licence__departement=departement) |
-                Q(etudiants__specialite__licence__departement=departement)
+                Q(etudiants__specialite__licence__departement=departement) |
+                Q(encadrant__departement__isnull=True) |
+                Q(etudiants__licence__isnull=True)
             ).distinct()
         
         # Un enseignant simple ne voit que les soutenances où il est encadrant ou rapporteur

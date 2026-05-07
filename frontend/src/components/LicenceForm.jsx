@@ -4,7 +4,8 @@ import './LicenceForm.css';
 const LicenceForm = ({ onSubmit, selectedLicence, onCancel, departements }) => {
   const [formData, setFormData] = useState({
     nom: selectedLicence?.nom || '',
-    code: selectedLicence?.code || '',
+    domaine: selectedLicence?.domaine || '',
+    parcours: selectedLicence?.parcours || '',
     description: selectedLicence?.description || '',
     duree: selectedLicence?.duree || '3 ans',
     departement: selectedLicence?.departement || '',
@@ -15,7 +16,6 @@ const LicenceForm = ({ onSubmit, selectedLicence, onCancel, departements }) => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.nom.trim()) newErrors.nom = 'Le nom est requis';
-    if (!formData.code.trim()) newErrors.code = 'Le code est requis';
     if (!formData.departement) newErrors.departement = 'Le département est requis';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -43,7 +43,8 @@ const LicenceForm = ({ onSubmit, selectedLicence, onCancel, departements }) => {
   const resetForm = () => {
     setFormData({
       nom: '',
-      code: '',
+      domaine: '',
+      parcours: '',
       description: '',
       duree: '3 ans',
       departement: '',
@@ -54,7 +55,7 @@ const LicenceForm = ({ onSubmit, selectedLicence, onCancel, departements }) => {
   return (
     <form onSubmit={handleSubmit} className="licence-form">
       <div className="form-group">
-        <label>Nom de la Licence *</label>
+        <label>Mention *</label>
         <input
           type="text"
           name="nom"
@@ -66,15 +67,23 @@ const LicenceForm = ({ onSubmit, selectedLicence, onCancel, departements }) => {
       </div>
 
       <div className="form-group">
-        <label>Code *</label>
+        <label>Domaine</label>
         <input
           type="text"
-          name="code"
-          value={formData.code}
+          name="domaine"
+          value={formData.domaine}
           onChange={handleChange}
-          className={errors.code ? 'input-error' : ''}
         />
-        {errors.code && <span className="error">{errors.code}</span>}
+      </div>
+
+      <div className="form-group">
+        <label>Parcours (Spécialités)</label>
+        <input
+          type="text"
+          name="parcours"
+          value={formData.parcours}
+          onChange={handleChange}
+        />
       </div>
 
       <div className="form-group">

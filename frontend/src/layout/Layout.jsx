@@ -9,18 +9,18 @@ HEADER
 SIDEBAR + MAIN CONTENT
 */
 
-function Layout({ children }) {
+function Layout({ children, role }) {
   return (
     <div className="layout">
 
       {/* HEADER (NAVBAR TOP) */}
-      <NavbarTop />
+      <NavbarTop role={role} />
 
       {/* BODY STRUCTURE */}
       <div className="layout-body">
 
         {/* LEFT SIDEBAR */}
-        <Sidebar />
+        <Sidebar role={role} />
 
         {/* RIGHT MAIN CONTENT */}
         <div className="main-content">

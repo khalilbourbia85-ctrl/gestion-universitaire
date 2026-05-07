@@ -27,7 +27,8 @@ class EtudiantViewSet(viewsets.ModelViewSet):
         elif role == 'chef_departement' and departement:
             return qs.filter(
                 Q(licence__departement=departement) |
-                Q(specialite__licence__departement=departement)
+                Q(specialite__licence__departement=departement) |
+                Q(licence__isnull=True)
             ).distinct()
         
         return Etudiant.objects.none()

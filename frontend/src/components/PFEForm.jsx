@@ -26,6 +26,7 @@ function collectEtudiantIdsFromPfe(p) {
 function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], licences = [], onCancel, onSubmit }) {
   const [sujet, setSujet] = useState('');
   const [duree, setDuree] = useState('');
+  const [lieu_stage, setLieu_stage] = useState('');
   const [licence, setLicence] = useState('');
   const [specialite, setSpecialite] = useState('');
   const [encadrant, setEncadrant] = useState('');
@@ -38,6 +39,7 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
     if (pfe) {
       setSujet(pfe.sujet || '');
       setDuree(pfe.duree || '');
+      setLieu_stage(pfe.lieu_stage || '');
       
       let initialSpec = pfe.specialite || '';
       let initialLicence = '';
@@ -77,6 +79,7 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
       setRulesAccepted(false);
       setSujet('');
       setDuree('');
+      setLieu_stage('');
       setSpecialite('');
       setLicence('');
       setEncadrant('');
@@ -117,6 +120,7 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
     onSubmit({
       sujet: sujet.trim(),
       duree: Number(duree),
+      lieu_stage: lieu_stage.trim(),
       specialite: specialite.trim(),
       encadrant: encadrant || null,
       etudiants: selectedEtudiants,
@@ -186,6 +190,16 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
               placeholder="Ex: 6"
               onChange={(e) => setDuree(e.target.value)}
               required
+            />
+          </div>
+
+          <div className="form-row">
+            <label>Lieu de stage</label>
+            <input
+              type="text"
+              value={lieu_stage}
+              placeholder="Entreprise ou lieu"
+              onChange={(e) => setLieu_stage(e.target.value)}
             />
           </div>
 

@@ -61,11 +61,11 @@ function PFEsTable({
           <th style={{ width: '60px' }}>ID PFE</th>
           <th style={{ width: '25%' }}>Sujet</th>
           <th style={{ width: '100px' }}>Durée (en mois)</th>
+          <th style={{ width: '15%' }}>Lieu de stage</th>
           <th style={{ width: '15%' }}>Spécialité</th>
           <th style={{ width: '25%' }}>Étudiants</th>
           <th style={{ width: '15%' }}>Encadrant</th>
           <th style={{ width: '12%' }}>Type contrat (enc.)</th>
-          <th style={{ width: '10%' }}>Jury</th>
           <th style={{ width: '150px' }}>Actions</th>
         </tr>
       </thead>
@@ -75,11 +75,11 @@ function PFEsTable({
             <td>{pfe?.idPfe ?? '-'}</td>
             <td>{pfe?.sujet ?? '-'}</td>
             <td>{pfe?.duree ? `${pfe.duree} mois` : '-'}</td>
+            <td>{pfe?.lieu_stage ?? '-'}</td>
             <td>{pfe?.specialite ?? '-'}</td>
             <td>{renderStudents(pfe)}</td>
             <td>{pfe?.encadrant_detail ? `${pfe.encadrant_detail.nom} ${pfe.encadrant_detail.prenom}` : '-'}</td>
             <td>{pfe?.encadrant_detail?.typeContrat || '—'}</td>
-            <td>{pfe?.jury_detail ? pfe.jury_detail.titre : '-'}</td>
             <td>
               {!disableActions ? (
                 <>

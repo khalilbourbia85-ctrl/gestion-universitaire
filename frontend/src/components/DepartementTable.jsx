@@ -1,8 +1,8 @@
 import React from 'react';
 import './Table.css';
-import { FaEdit, FaTrash } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaUserCircle } from 'react-icons/fa';
 
-const DepartementTable = ({ departements, onEdit, onDelete }) => {
+const DepartementTable = ({ departements, onEdit, onDelete, onViewProfile }) => {
   return (
     <table className="table">
       <thead>
@@ -23,7 +23,27 @@ const DepartementTable = ({ departements, onEdit, onDelete }) => {
               <td>{dept.id}</td>
               <td>{dept.nom}</td>
               <td>{dept.code}</td>
-              <td>{dept.responsable || '-'}</td>
+              <td>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {dept.photo ? (
+                    <img 
+                      src={dept.photo} 
+                      alt="Profil" 
+                      style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', cursor: 'pointer', border: '1px solid #cbd5e1' }}
+                      onClick={() => onViewProfile && onViewProfile(dept)}
+                      title="Voir le profil du département"
+                    />
+                  ) : (
+                    <FaUserCircle 
+                      size={24} 
+                      style={{ cursor: 'pointer', color: '#cbd5e1' }} 
+                      onClick={() => onViewProfile && onViewProfile(dept)}
+                      title="Voir le profil du département"
+                    />
+                  )}
+                  {dept.responsable || '-'}
+                </div>
+              </td>
               <td>{dept.email || '-'}</td>
               <td>{dept.telephone || '-'}</td>
               <td className="actions">

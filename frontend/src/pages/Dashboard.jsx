@@ -139,8 +139,8 @@ export default function Dashboard() {
               <h3>Étudiants par Licence</h3>
               <div className="chart-wrapper">
                 {chartData.etudiantsParLicence.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData.etudiantsParLicence}>
+                  <div style={{ width: '100%', overflowX: 'auto' }}>
+                    <BarChart width={500} height={300} data={chartData.etudiantsParLicence}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} />
                       <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
@@ -151,7 +151,7 @@ export default function Dashboard() {
                         ))}
                       </Bar>
                     </BarChart>
-                  </ResponsiveContainer>
+                  </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#6b7280' }}>
                     Aucune donnée disponible
@@ -164,8 +164,8 @@ export default function Dashboard() {
               <h3>Enseignants par Type de Contrat</h3>
               <div className="chart-wrapper">
                 {chartData.enseignantsParContrat.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <PieChart width={400} height={300}>
                       <Pie
                         data={chartData.enseignantsParContrat}
                         cx="50%"
@@ -182,7 +182,7 @@ export default function Dashboard() {
                       </Pie>
                       <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)'}} />
                     </PieChart>
-                  </ResponsiveContainer>
+                  </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#6b7280' }}>
                     Aucune donnée disponible

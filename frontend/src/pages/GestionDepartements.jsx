@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import DepartementForm from '../components/DepartementForm';
 import DepartementTable from '../components/DepartementTable';
+import ChefProfileModal from '../components/ChefProfileModal';
 import './GestionEtudiants.css';
 
-const GestionDepartements = () => {
+const GestionDepartements = ({ role }) => {
   const [departements, setDepartements] = useState([]);
   const [filteredDepartements, setFilteredDepartements] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,6 +14,8 @@ const GestionDepartements = () => {
   const [selectedDepartement, setSelectedDepartement] = useState(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [viewProfileId, setViewProfileId] = useState(null);
   
   const fileRef = useRef(null);
 
@@ -31,6 +34,8 @@ const GestionDepartements = () => {
     } catch (error) {
       console.error('Erreur:', error);
       alert('Erreur lors du chargement des départements');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -188,8 +193,17 @@ const GestionDepartements = () => {
           departements={filteredDepartements}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onViewProfile={(dept) => setViewProfileId(dept.id)}
         />
       </div>
+
+      {viewProfileId && (
+        <ChefProfileModal 
+          departementId={viewProfileId} 
+          onClose={() => setViewProfileId(null)} 
+          onUpdate={fetchDepartements}
+        />
+      )}
     </div>
   );
 };

@@ -14,6 +14,8 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
     adresse: "",
     nationalite: "",
     passport: "",
+    groupe: "",
+    situation: "N",
     licence: "",
     specialite: "",
   });
@@ -34,6 +36,8 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
         adresse: selected.adresse || "",
         nationalite: selected.nationalite || "",
         passport: selected.passport || "",
+        groupe: selected.groupe || "",
+        situation: selected.situation || "N",
         licence:
           selected.licence != null && selected.licence !== ""
             ? String(selected.licence)
@@ -61,6 +65,8 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
         adresse: "",
         nationalite: "",
         passport: "",
+        groupe: "",
+        situation: "N",
         licence: "",
         specialite: "",
       });
@@ -84,6 +90,8 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
     adresse: normalizeSpaces(data.adresse),
     nationalite: normalizeSpaces(data.nationalite),
     passport: String(data.passport || "").trim(),
+    groupe: normalizeSpaces(data.groupe),
+    situation: data.situation || "N",
     dateNaissance: String(data.dateNaissance || "").trim(),
     licence:
       data.licence === "" || data.licence == null || data.licence === undefined
@@ -311,6 +319,24 @@ value={form.passport}
 onChange={handleChange}
 placeholder="-"
 />
+        </div>
+
+        <div className="input-group">
+          <label>Situation</label>
+          <select name="situation" value={form.situation} onChange={handleChange}>
+            <option value="N">Nouveau</option>
+            <option value="R">Redoublant</option>
+          </select>
+        </div>
+
+        <div className="input-group">
+          <label>Groupe</label>
+          <input
+            name="groupe"
+            value={form.groupe}
+            onChange={handleChange}
+            placeholder="-"
+          />
         </div>
 
         <div className="input-group">

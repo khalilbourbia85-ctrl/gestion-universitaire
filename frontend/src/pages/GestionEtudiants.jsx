@@ -126,6 +126,7 @@ function GestionEtudiants() {
     dateInscription: String(item.dateInscription || "").trim(),
     nationalite: normalizeSpaces(item.nationalite),
     passport: String(item.passport || "").trim(),
+    groupe: String(item.groupe || "").trim(),
     licence:
       item.licence != null && item.licence !== ""
         ? Number(item.licence)
@@ -134,6 +135,7 @@ function GestionEtudiants() {
       item.specialite != null && item.specialite !== ""
         ? Number(item.specialite)
         : null,
+    situation: item.situation && item.situation.toUpperCase().startsWith('R') ? 'R' : 'N',
   });
 
   const normalizeHeader = (header) =>
@@ -197,6 +199,12 @@ function GestionEtudiants() {
         case "idetudiant":
         case "id etudiant":
           return "idEtudiant";
+        case "groupe":
+        case "group":
+          return "groupe";
+        case "situation":
+        case "etat":
+          return "situation";
         default:
           return normalized;
       }
@@ -360,6 +368,12 @@ function GestionEtudiants() {
       case "Spécialité":
         return String(e.specialite_detail?.nom || e.specialite_detail?.code || "").toLowerCase().includes(term);
 
+      case "Groupe":
+        return String(e.groupe || "").toLowerCase().includes(term);
+
+      case "Situation":
+        return (e.situation === 'N' ? 'nouveau' : 'redoublant').includes(term) || (e.situation || "").toLowerCase().includes(term);
+
       default:
         return (
           String(e.idEtudiant || "").toLowerCase().includes(term) ||
@@ -370,7 +384,9 @@ function GestionEtudiants() {
           String(e.numTel || "").toLowerCase().includes(term) ||
           String(e.nationalite || "").toLowerCase().includes(term) ||
           String(e.licence_detail?.nom || "").toLowerCase().includes(term) ||
-          String(e.specialite_detail?.nom || "").toLowerCase().includes(term)
+          String(e.specialite_detail?.nom || "").toLowerCase().includes(term) ||
+          String(e.groupe || "").toLowerCase().includes(term) ||
+          (e.situation === 'N' ? 'nouveau' : 'redoublant').includes(term)
         );
 
     }
@@ -449,6 +465,14 @@ function GestionEtudiants() {
 
             <option value="Spécialité">
               Spécialité
+            </option>
+
+            <option value="Groupe">
+              Groupe
+            </option>
+
+            <option value="Situation">
+              Situation
             </option>
           </select>
   

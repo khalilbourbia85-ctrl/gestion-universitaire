@@ -32,6 +32,8 @@ class EtudiantSerializer(serializers.ModelSerializer):
             'numTel',
             'dateNaissance',
             'adresse',
+            'situation',
+            'groupe',
             'licence',
             'specialite',
             'licence_detail',

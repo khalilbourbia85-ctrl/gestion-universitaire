@@ -18,6 +18,8 @@ function EtudiantsTable({ etudiants, onEdit, onDelete }) {
 <th>🏠Adresse</th>
 <th>🎓Licence</th>
 <th>📚Spécialité</th>
+<th>👥Groupe</th>
+<th>📊Situation</th>
 <th>⚙️Actions</th>
 </tr>
 
@@ -37,6 +39,8 @@ function EtudiantsTable({ etudiants, onEdit, onDelete }) {
             <td>{e.adresse || '-'}</td>
             <td>{e.licence_detail ? `${e.licence_detail.nom} (${e.licence_detail.code})` : '—'}</td>
             <td>{e.specialite_detail ? `${e.specialite_detail.nom} (${e.specialite_detail.code})` : '—'}</td>
+            <td>{e.groupe || '-'}</td>
+            <td>{e.situation === 'N' ? 'Nouveau' : e.situation === 'R' ? 'Redoublant' : '-'}</td>
 
             <td>
 

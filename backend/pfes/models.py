@@ -59,6 +59,7 @@ class PFE(models.Model):
     )
     # Informations relatives aux PFE
     date_affectation = models.DateField(null=True, blank=True)
+    lieu_stage = models.CharField(max_length=200, null=True, blank=True)
     convention_file = models.FileField(upload_to='conventions/', null=True, blank=True)
     lettre_affectation_file = models.FileField(upload_to='lettres_affectation/', null=True, blank=True)
 
@@ -73,7 +74,7 @@ class PFE(models.Model):
 
 class PFEStudent(models.Model):
     pfe = models.ForeignKey(PFE, on_delete=models.CASCADE, related_name='participants')
-    etudiant = models.OneToOneField(Etudiant, on_delete=models.PROTECT, related_name='pfe_assignment')
+    etudiant = models.OneToOneField(Etudiant, on_delete=models.CASCADE, related_name='pfe_assignment')
 
     class Meta:
         verbose_name = 'Affectation étudiant PFE'

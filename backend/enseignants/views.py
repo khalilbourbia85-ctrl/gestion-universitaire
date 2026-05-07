@@ -70,7 +70,7 @@ class EnseignantViewSet(viewsets.ModelViewSet):
         if role == 'admin':
             return qs.all()
         elif role == 'chef_departement' and departement:
-            return qs.filter(departement=departement)
+            return qs.filter(Q(departement=departement) | Q(departement__isnull=True))
         
         return qs.filter(matricule=enseignant.matricule)
 
