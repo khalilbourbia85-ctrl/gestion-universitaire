@@ -3,6 +3,7 @@ import axios from 'axios';
 import DepartementForm from '../components/DepartementForm';
 import DepartementTable from '../components/DepartementTable';
 import ChefProfileModal from '../components/ChefProfileModal';
+import { parseFile } from "../utils/fileParser";
 import './GestionEtudiants.css';
 
 const GestionDepartements = ({ role }) => {
@@ -109,19 +110,50 @@ const GestionDepartements = ({ role }) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const response = await axios.post('/api/departements/import-excel/', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const data = await parseFile(file);
+
+      const normalizeHeader = (header) =>
+        String(header)
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, " ")
+          .replace(/[^a-z0-9 ]/g, "");
+
+      const importedData = data.map(row => {
+        return Object.keys(row).reduce((acc, key) => {
+          const normKey = normalizeHeader(key);
+          let finalKey = normKey;
+          if (normKey === 'nom' || normKey === 'intitule') finalKey = 'nom';
+          if (normKey === 'code' || normKey === 'identifiant') finalKey = 'code';
+          if (normKey === 'responsable' || normKey === 'chef' || normKey === 'chef de departement') finalKey = 'responsable';
+          if (normKey === 'email' || normKey === 'courriel') finalKey = 'email';
+          
+          acc[finalKey] = row[key];
+          return acc;
+        }, {});
       });
-      setMessage(`Import réussi : ${response.data.created.length} département(s) ajouté(s).`);
+
+      if (!Array.isArray(importedData) || !importedData.length) {
+        setError("Aucune donnée importable trouvée.");
+        return;
+      }
+
+      let successCount = 0;
+      for (const record of importedData) {
+        try {
+          await axios.post('/api/departements/', record);
+          successCount++;
+        } catch (itemErr) {
+          console.error(`Erreur lors de l'import:`, itemErr);
+        }
+      }
+      setMessage(`${successCount} département(s) importé(s) avec succès.`);
       setError('');
       fetchDepartements();
     } catch (err) {
-      setError(err.response?.data?.errors || err.response?.data?.detail || 'Erreur d\'import Excel.');
-      setMessage('');
+      console.error(err);
+      setError("Erreur lors de l'importation: " + (err.message || "Veuillez vérifier le format de vos données."));
     } finally {
       event.target.value = null;
     }
@@ -138,7 +170,7 @@ const GestionDepartements = ({ role }) => {
         type="file"
         ref={fileRef}
         onChange={handleFileChange}
-        accept=".xlsx,.xls,.csv"
+        accept=".csv,.json,.xlsx,.xls"
         style={{ display: 'none' }}
       />
 

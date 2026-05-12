@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import EtudiantsTable from "../components/EtudiantsTable";
 import EtudiantForm from "../components/EtudiantForm";
+import MultiSelectDropdown from "../components/MultiSelectDropdown";
+import { parseFile } from "../utils/fileParser";
 import "./GestionEtudiants.css";
 
 function GestionEtudiants() {
@@ -9,7 +11,7 @@ function GestionEtudiants() {
   const [selected, setSelected] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterBy, setFilterBy] = useState("Tous les champs");
+  const [filterBy, setFilterBy] = useState(["Tous les champs"]);
   const [successMessage, setSuccessMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -146,6 +148,8 @@ function GestionEtudiants() {
       .replace(/[^a-z0-9 ]/g, "");
 
   const parseCsvLine = (line) => {
+    // Keep this function around just in case it's used elsewhere, 
+    // but the main logic is moved to parseFile.
     const parts = [];
     const regex = /(?:"([^"]*(?:""[^"]*)*)"|([^",]*))(?:,|$)/g;
     let match;
@@ -157,68 +161,49 @@ function GestionEtudiants() {
     return parts;
   };
 
-  const parseCsv = (text) => {
-    const rows = text
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    if (rows.length < 2) return [];
-
-    const rawHeaders = parseCsvLine(rows[0]);
-    const headers = rawHeaders.map((field) => {
-      const normalized = normalizeHeader(field);
-      switch (normalized) {
-        case "cin":
-        case "cni":
-          return "cin";
-        case "nom":
-          return "nom";
-        case "prenom":
-          return "prenom";
-        case "email":
-          return "email";
-        case "telephone":
-        case "numtel":
-        case "num tele":
-          return "numTel";
-        case "datenaissance":
-        case "date naissance":
-          return "dateNaissance";
-        case "adresse":
-          return "adresse";
-        case "dateinscription":
-        case "date inscription":
-          return "dateInscription";
-        case "nationalite":
-        case "nationalité":
-          return "nationalite";
-        case "passport":
-        case "passeport":
-          return "passport";
-        case "idetudiant":
-        case "id etudiant":
-          return "idEtudiant";
-        case "groupe":
-        case "group":
-          return "groupe";
-        case "situation":
-        case "etat":
-          return "situation";
-        default:
-          return normalized;
-      }
-    });
-
-    return rows.slice(1).map((line) => {
-      const values = parseCsvLine(line);
-      return headers.reduce((acc, header, index) => {
-        acc[header] = values[index] ?? "";
-        return acc;
-      }, {});
-    });
+  const getNormalizedKey = (field) => {
+    const normalized = normalizeHeader(field);
+    switch (normalized) {
+      case "cin":
+      case "cni":
+        return "cin";
+      case "nom":
+        return "nom";
+      case "prenom":
+        return "prenom";
+      case "email":
+        return "email";
+      case "telephone":
+      case "numtel":
+      case "num tele":
+        return "numTel";
+      case "datenaissance":
+      case "date naissance":
+        return "dateNaissance";
+      case "adresse":
+        return "adresse";
+      case "dateinscription":
+      case "date inscription":
+        return "dateInscription";
+      case "nationalite":
+      case "nationalité":
+        return "nationalite";
+      case "passport":
+      case "passeport":
+        return "passport";
+      case "idetudiant":
+      case "id etudiant":
+        return "idEtudiant";
+      case "groupe":
+      case "group":
+        return "groupe";
+      case "situation":
+      case "etat":
+        return "situation";
+      default:
+        return normalized;
+    }
   };
-
 
   /*
   IMPORT BUTTON CLICK
@@ -247,20 +232,15 @@ function GestionEtudiants() {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      let importedData = [];
-      const text = reader.result;
-
-      if (file.name.toLowerCase().endsWith(".json")) {
-        try {
-          importedData = JSON.parse(text);
-        } catch (error) {
-          return alert("Impossible de lire le fichier JSON.");
-        }
-      } else {
-        importedData = parseCsv(text);
-      }
+    try {
+      const rawData = await parseFile(file);
+      
+      const importedData = rawData.map(row => {
+        return Object.keys(row).reduce((acc, key) => {
+          acc[getNormalizedKey(key)] = row[key];
+          return acc;
+        }, {});
+      });
 
       if (!Array.isArray(importedData) || !importedData.length) {
         return alert("Aucune donnée importable trouvée.");
@@ -274,37 +254,28 @@ function GestionEtudiants() {
         return alert("Aucune ligne valide trouvée après nettoyage.");
       }
 
-      try {
-        setError("");
-        let successCount = 0;
+      setError("");
+      let successCount = 0;
 
-        // Import each student via API
-        for (const student of cleanedData) {
-          try {
-            await axios.post("/api/etudiants/", student);
-            successCount++;
-          } catch (err) {
-            console.error("Erreur lors de l'import d'un étudiant:", err);
-            // Continue with next student
-          }
+      for (const student of cleanedData) {
+        try {
+          await axios.post("/api/etudiants/", student);
+          successCount++;
+        } catch (err) {
+          console.error("Erreur lors de l'import d'un étudiant:", err);
         }
-
-        setSuccessMessage(`${successCount} étudiant(s) importé(s) avec succès`);
-
-        // Reload data from API
-        await loadData();
-
-        setTimeout(() => setSuccessMessage(""), 3000);
-      } catch (err) {
-        const message = err.response?.data?.detail ||
-                       err.response?.data?.message ||
-                       err.message ||
-                       "Erreur lors de l'import";
-        setError(message);
       }
-    };
 
-    reader.readAsText(file);
+      setSuccessMessage(`${successCount} étudiant(s) importé(s) avec succès`);
+      await loadData();
+      setTimeout(() => setSuccessMessage(""), 3000);
+      
+    } catch (err) {
+      console.error(err);
+      setError("Erreur lors de l'importation: " + (err.message || "Veuillez vérifier le format de vos données."));
+    } finally {
+      if (fileRef.current) fileRef.current.value = "";
+    }
   };
 
   const handleDelete = async (idEtudiant) => {
@@ -334,63 +305,42 @@ function GestionEtudiants() {
   */
 
   const filteredEtudiants = etudiants.filter((e) => {
-
     if (!searchTerm.trim()) return true;
 
     const term = searchTerm.toLowerCase();
 
-    switch (filterBy) {
-
-      case "Matricule":
-        return String(e.idEtudiant || "").toLowerCase().includes(term);
-
-      case "CIN":
-        return e.cin.toLowerCase().includes(term);
-
-      case "Nom":
-        return e.nom.toLowerCase().includes(term);
-
-      case "Prénom":
-        return e.prenom.toLowerCase().includes(term);
-
-      case "Email":
-        return e.email.toLowerCase().includes(term);
-
-      case "Téléphone":
-        return String(e.numTel || "").toLowerCase().includes(term);
-
-      case "Nationalité":
-        return String(e.nationalite || "").toLowerCase().includes(term);
-
-      case "Licence":
-        return String(e.licence_detail?.nom || e.licence_detail?.code || "").toLowerCase().includes(term);
-
-      case "Spécialité":
-        return String(e.specialite_detail?.nom || e.specialite_detail?.code || "").toLowerCase().includes(term);
-
-      case "Groupe":
-        return String(e.groupe || "").toLowerCase().includes(term);
-
-      case "Situation":
-        return (e.situation === 'N' ? 'nouveau' : 'redoublant').includes(term) || (e.situation || "").toLowerCase().includes(term);
-
-      default:
-        return (
-          String(e.idEtudiant || "").toLowerCase().includes(term) ||
-          e.cin.toLowerCase().includes(term) ||
-          e.nom.toLowerCase().includes(term) ||
-          e.prenom.toLowerCase().includes(term) ||
-          e.email.toLowerCase().includes(term) ||
-          String(e.numTel || "").toLowerCase().includes(term) ||
-          String(e.nationalite || "").toLowerCase().includes(term) ||
-          String(e.licence_detail?.nom || "").toLowerCase().includes(term) ||
-          String(e.specialite_detail?.nom || "").toLowerCase().includes(term) ||
-          String(e.groupe || "").toLowerCase().includes(term) ||
-          (e.situation === 'N' ? 'nouveau' : 'redoublant').includes(term)
-        );
-
+    if (filterBy.includes("Tous les champs")) {
+      return (
+        String(e.idEtudiant || "").toLowerCase().includes(term) ||
+        e.cin.toLowerCase().includes(term) ||
+        e.nom.toLowerCase().includes(term) ||
+        e.prenom.toLowerCase().includes(term) ||
+        e.email.toLowerCase().includes(term) ||
+        String(e.numTel || "").toLowerCase().includes(term) ||
+        String(e.nationalite || "").toLowerCase().includes(term) ||
+        String(e.licence_detail?.nom || "").toLowerCase().includes(term) ||
+        String(e.specialite_detail?.nom || "").toLowerCase().includes(term) ||
+        String(e.groupe || "").toLowerCase().includes(term) ||
+        (e.situation === 'N' ? 'nouveau' : 'redoublant').includes(term)
+      );
+    } else {
+      return filterBy.some(field => {
+        switch (field) {
+          case "Matricule": return String(e.idEtudiant || "").toLowerCase().includes(term);
+          case "CIN": return e.cin.toLowerCase().includes(term);
+          case "Nom": return e.nom.toLowerCase().includes(term);
+          case "Prénom": return e.prenom.toLowerCase().includes(term);
+          case "Email": return e.email.toLowerCase().includes(term);
+          case "Téléphone": return String(e.numTel || "").toLowerCase().includes(term);
+          case "Nationalité": return String(e.nationalite || "").toLowerCase().includes(term);
+          case "Licence": return String(e.licence_detail?.nom || e.licence_detail?.code || "").toLowerCase().includes(term);
+          case "Spécialité": return String(e.specialite_detail?.nom || e.specialite_detail?.code || "").toLowerCase().includes(term);
+          case "Groupe": return String(e.groupe || "").toLowerCase().includes(term);
+          case "Situation": return (e.situation === 'N' ? 'nouveau' : 'redoublant').includes(term) || (e.situation || "").toLowerCase().includes(term);
+          default: return false;
+        }
+      });
     }
-
   });
 
 
@@ -417,69 +367,22 @@ function GestionEtudiants() {
   
       <div className="page-container">
 
-        <div className="search-area">
+        <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
-          <select
-            className="filter-select"
-            value={filterBy}
-            onChange={(e) =>
-              setFilterBy(e.target.value)
-            }
-          >
-
-            <option value="Tous les champs">
-              Tous les champs
-            </option>
-
-            <option value="Matricule">
-              Matricule
-            </option>
-
-            <option value="CIN">
-              CIN
-            </option>
-
-            <option value="Nom">
-              Nom
-            </option>
-
-            <option value="Prénom">
-              Prénom
-            </option>
-
-            <option value="Email">
-              Email
-            </option>
-
-            <option value="Téléphone">
-              Téléphone
-            </option>
-
-            <option value="Nationalité">
-              Nationalité
-            </option>
-
-            <option value="Licence">
-              Licence
-            </option>
-
-            <option value="Spécialité">
-              Spécialité
-            </option>
-
-            <option value="Groupe">
-              Groupe
-            </option>
-
-            <option value="Situation">
-              Situation
-            </option>
-          </select>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+            <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
+            <MultiSelectDropdown
+              label="Tous les champs sélectionnés"
+              options={["Tous les champs", "Matricule", "CIN", "Nom", "Prénom", "Email", "Téléphone", "Nationalité", "Licence", "Spécialité", "Groupe", "Situation"]}
+              selected={filterBy}
+              onChange={setFilterBy}
+            />
+          </div>
   
           <input
             type="text"
             className="search-input"
-            placeholder={`Rechercher par ${filterBy.toLowerCase()}`}
+            placeholder={`Rechercher par ${Array.isArray(filterBy) ? (filterBy.includes('Tous les champs') ? 'tous les champs' : filterBy.join(', ').toLowerCase()) : '...'}`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -507,9 +410,9 @@ function GestionEtudiants() {
 
       <input
         type="file"
-        accept=".csv,.json"
         ref={fileRef}
         style={{ display: "none" }}
+        accept=".csv,.json,.xlsx,.xls"
         onChange={handleImport}
       />
 
@@ -539,6 +442,7 @@ function GestionEtudiants() {
           setShowForm(true);
         }}
         onDelete={handleDelete}
+        filterBy={filterBy}
       />
   
     </>

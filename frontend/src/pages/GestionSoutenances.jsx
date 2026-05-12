@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import SoutenancesTable from '../components/SoutenancesTable';
 import SoutenanceForm from '../components/SoutenanceForm';
+import { parseFile } from "../utils/fileParser";
 import './GestionSoutenances.css';
 
 function GestionSoutenances() {
@@ -140,62 +141,56 @@ function GestionSoutenances() {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      let importedData = [];
-      const text = reader.result;
+    try {
+      const data = await parseFile(file);
 
-      if (file.name.toLowerCase().endsWith('.json')) {
-        try {
-          importedData = JSON.parse(text);
-        } catch (e) {
-          console.error(e);
-          return alert('Impossible de lire le fichier JSON.');
-        }
-      } else {
-        const rows = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-        if (rows.length < 2) return alert('Fichier CSV vide ou invalide.');
-        const headers = rows[0].split(',').map(h => h.trim().toLowerCase());
+      const normalizeHeader = (header) =>
+        String(header)
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, " ")
+          .replace(/[^a-z0-9 ]/g, "");
 
-        importedData = rows.slice(1).map(line => {
-          const values = line.split(',');
-          return headers.reduce((acc, header, index) => {
-            acc[header] = values[index]?.trim() ?? '';
-            return acc;
-          }, {});
-        });
-      }
+      const importedData = data.map(row => {
+        return Object.keys(row).reduce((acc, key) => {
+          const normKey = normalizeHeader(key);
+          let finalKey = normKey;
+          if (normKey === 'idsoutenance' || normKey === 'id soutenance') finalKey = 'idSoutenance';
+          if (normKey === 'date' || normKey === 'date soutenance' || normKey === 'date_soutenance') finalKey = 'date_soutenance';
+          if (normKey === 'heure' || normKey === 'heure soutenance' || normKey === 'heure_soutenance') finalKey = 'heure_soutenance';
+          
+          acc[finalKey] = row[key];
+          return acc;
+        }, {});
+      });
 
       if (!Array.isArray(importedData) || !importedData.length) {
         return alert('Aucune donnée importable trouvée.');
       }
 
-      try {
-        setLoading(true);
-        let successCount = 0;
-        for (const record of importedData) {
-          try {
-            if (record.etudiants && typeof record.etudiants === 'string') {
-              record.etudiants = record.etudiants.split(';').map(id => Number(id.trim())).filter(id => !isNaN(id));
-            }
-            await axios.post('/api/soutenances/', record);
-            successCount++;
-          } catch (err) {
-            console.error("Erreur lors de l'import:", err);
+      setLoading(true);
+      let successCount = 0;
+      for (const record of importedData) {
+        try {
+          if (record.etudiants && typeof record.etudiants === 'string') {
+            record.etudiants = record.etudiants.split(';').map(id => Number(id.trim())).filter(id => !isNaN(id));
           }
+          await axios.post('/api/soutenances/', record);
+          successCount++;
+        } catch (err) {
+          console.error("Erreur lors de l'import:", err);
         }
-        setMessage(`${successCount} soutenance(s) importée(s) avec succès.`);
-        await loadData();
-        setTimeout(() => setMessage(''), 3000);
-      } catch (err) {
-        console.error(err);
-        setError("Erreur lors de la génération du PV.");
-      } finally {
-        setLoading(false);
       }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
+      setMessage(`${successCount} soutenance(s) importée(s) avec succès.`);
+      await loadData();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      console.error(err);
+      setError("Erreur lors de l'importation: " + (err.message || "Veuillez vérifier le format de vos données."));
+    } finally {
+      setLoading(false);
+      e.target.value = '';
+    }
   };
 
   return (
@@ -253,7 +248,7 @@ function GestionSoutenances() {
 
           <input
             type="file"
-            accept=".csv,.json"
+            accept=".csv,.json,.xlsx,.xls"
             ref={fileRef}
             style={{ display: 'none' }}
             onChange={handleImport}

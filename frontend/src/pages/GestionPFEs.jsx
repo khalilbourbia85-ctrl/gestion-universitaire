@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import axios from 'axios';
 import PFEsTable from '../components/PFEsTable';
 import PFEForm from '../components/PFEForm';
+import MultiSelectDropdown from "../components/MultiSelectDropdown";
+import { parseFile } from "../utils/fileParser";
 import './GestionEtudiants.css';
 
 class ErrorBoundary extends React.Component {
@@ -56,7 +58,7 @@ function GestionPFEs() {
   const [selectedPFE, setSelectedPFE] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterBy, setFilterBy] = useState('Tous les champs');
+  const [filterBy, setFilterBy] = useState(['Tous les champs']);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -154,30 +156,36 @@ function GestionPFEs() {
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
 
-    switch (filterBy) {
-      case 'ID PFE':
-        return String(item?.idPfe || '').toLowerCase().includes(term);
-      case 'Sujet':
-        return String(item?.sujet || '').toLowerCase().includes(term);
-      case 'Spécialité':
-        return String(item?.specialite || '').toLowerCase().includes(term);
-      case 'Lieu de stage':
-        return String(item?.lieu_stage || '').toLowerCase().includes(term);
-      case 'Encadrant':
-        return String(item?.encadrant_detail?.nom || '').toLowerCase().includes(term) ||
-          String(item?.encadrant_detail?.prenom || '').toLowerCase().includes(term);
-      case 'Type contrat enc.':
-        return String(item?.encadrant_detail?.typeContrat || '').toLowerCase().includes(term);
-      default:
-        return (
-          String(item?.idPfe || '').toLowerCase().includes(term) ||
-          String(item?.sujet || '').toLowerCase().includes(term) ||
-          String(item?.specialite || '').toLowerCase().includes(term) ||
-          String(item?.lieu_stage || '').toLowerCase().includes(term) ||
-          String(item?.encadrant_detail?.nom || '').toLowerCase().includes(term) ||
-          String(item?.encadrant_detail?.prenom || '').toLowerCase().includes(term) ||
-          String(item?.encadrant_detail?.typeContrat || '').toLowerCase().includes(term)
-        );
+    if (filterBy.includes('Tous les champs')) {
+      return (
+        String(item?.idPfe || '').toLowerCase().includes(term) ||
+        String(item?.sujet || '').toLowerCase().includes(term) ||
+        String(item?.specialite || '').toLowerCase().includes(term) ||
+        String(item?.lieu_stage || '').toLowerCase().includes(term) ||
+        String(item?.encadrant_detail?.nom || '').toLowerCase().includes(term) ||
+        String(item?.encadrant_detail?.prenom || '').toLowerCase().includes(term) ||
+        String(item?.encadrant_detail?.typeContrat || '').toLowerCase().includes(term)
+      );
+    } else {
+      return filterBy.some(field => {
+        switch (field) {
+          case 'ID PFE':
+            return String(item?.idPfe || '').toLowerCase().includes(term);
+          case 'Sujet':
+            return String(item?.sujet || '').toLowerCase().includes(term);
+          case 'Spécialité':
+            return String(item?.specialite || '').toLowerCase().includes(term);
+          case 'Lieu de stage':
+            return String(item?.lieu_stage || '').toLowerCase().includes(term);
+          case 'Encadrant':
+            return String(item?.encadrant_detail?.nom || '').toLowerCase().includes(term) ||
+              String(item?.encadrant_detail?.prenom || '').toLowerCase().includes(term);
+          case 'Type contrat enc.':
+            return String(item?.encadrant_detail?.typeContrat || '').toLowerCase().includes(term);
+          default:
+            return false;
+        }
+      });
     }
   });
 
@@ -602,18 +610,52 @@ function GestionPFEs() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const response = await axios.post('/api/pfes/import-excel/', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const jsonData = await parseFile(file);
+
+      const normalizeHeader = (header) =>
+        String(header)
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, " ")
+          .replace(/[^a-z0-9 ]/g, "");
+
+      const importedData = jsonData.map(row => {
+        return Object.keys(row).reduce((acc, key) => {
+          const normKey = normalizeHeader(key);
+          let finalKey = normKey;
+          if (normKey === 'sujet' || normKey === 'titre') finalKey = 'sujet';
+          if (normKey === 'specialite' || normKey === 'spécialité') finalKey = 'specialite';
+          if (normKey === 'lieustage' || normKey === 'lieu de stage') finalKey = 'lieu_stage';
+          
+          acc[finalKey] = row[key];
+          return acc;
+        }, {});
       });
-      setMessage(`Import réussi : ${response.data.created.length} PFE(s) ajoutés.`);
+
+      if (!Array.isArray(importedData) || !importedData.length) {
+        setError("Aucune donnée importable trouvée.");
+        return;
+      }
+
+      let successCount = 0;
+      for (const record of importedData) {
+        try {
+          if (record.etudiants && typeof record.etudiants === 'string') {
+            record.etudiants = record.etudiants.split(';').map(id => Number(id.trim())).filter(id => !isNaN(id));
+          }
+          await axios.post('/api/pfes/', record);
+          successCount++;
+        } catch (itemErr) {
+          console.error(`Erreur lors de l'import d'un PFE:`, itemErr);
+        }
+      }
+      setMessage(`${successCount} PFE(s) importé(s) avec succès.`);
       setError('');
       loadData();
     } catch (err) {
-      setError(err.response?.data?.errors || err.response?.data?.detail || 'Erreur d\'import Excel.');
+      console.error(err);
+      setError("Erreur lors de l'importation: " + (err.message || "Veuillez vérifier le format de vos données."));
     } finally {
       event.target.value = null;
     }
@@ -626,16 +668,16 @@ function GestionPFEs() {
       {error && <div className="success-message" style={{ background: '#e53e3e' }}>{JSON.stringify(error)}</div>}
 
       <div className="page-container">
-        <div className="search-area">
-          <select className="filter-select" value={filterBy} onChange={(e) => setFilterBy(e.target.value)}>
-            <option>Tous les champs</option>
-            <option>ID PFE</option>
-            <option>Sujet</option>
-            <option>Lieu de stage</option>
-            <option>Spécialité</option>
-            <option>Encadrant</option>
-            <option>Type contrat enc.</option>
-          </select>
+        <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+            <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
+            <MultiSelectDropdown
+              label="Tous les champs sélectionnés"
+              options={["Tous les champs", "ID PFE", "Sujet", "Lieu de stage", "Spécialité", "Encadrant", "Type contrat enc."]}
+              selected={filterBy}
+              onChange={setFilterBy}
+            />
+          </div>
           <input
             type="text"
             placeholder="Rechercher..."
@@ -668,7 +710,7 @@ function GestionPFEs() {
           >
             🔄 Réassigner Tous
           </button>
-          <input type="file" accept=".xlsx,.xls" ref={pfeFileRef} onChange={handleFileChange} style={{ display: 'none' }} />
+          <input type="file" accept=".csv,.json,.xlsx,.xls" ref={pfeFileRef} onChange={handleFileChange} style={{ display: 'none' }} />
         </div>
       </div>
 
@@ -818,6 +860,7 @@ function GestionPFEs() {
               enseignants={enseignants || []}
               encadrantGroupCount={getEncadrantGroupCount()}
               getEncadrantMaxGroupes={getEncadrantMaxGroupes}
+              filterBy={filterBy}
             />
           </div>
         </>

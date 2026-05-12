@@ -13,6 +13,9 @@ import axios from "axios";
 //   axios.defaults.headers.common['Authorization'] = `Token ${token}`;
 // }
 
+// Set dynamic base URL for production
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || '';
+
 ReactDOM.createRoot(document.getElementById("root")).render(
 
 <BrowserRouter>

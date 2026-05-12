@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import EnseignantsTable from "../components/EnseignantsTable";
 import EnseignantForm from "../components/EnseignantsForm";
+import MultiSelectDropdown from "../components/MultiSelectDropdown";
+import { parseFile } from "../utils/fileParser";
 import "./GestionEtudiants.css";
 
 // Tableaux supplémentaires
@@ -17,7 +19,7 @@ function GestionEnseignants() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterBy, setFilterBy] = useState("Tous les champs");
+  const [filterBy, setFilterBy] = useState(["Tous les champs"]);
 
   const fileRef = useRef(null);
 
@@ -142,121 +144,6 @@ function GestionEnseignants() {
     }
   };
 
-  const normalizeSpaces = (value) =>
-    typeof value === "string"
-      ? value.trim().replace(/\s+/g, " ")
-      : value;
-
-  const cleanDigits = (value) =>
-    String(value || "").replace(/\D/g, "");
-
-  const cleanEmail = (value) =>
-    String(value || "").trim().toLowerCase();
-
-  const cleanEnseignant = (item) => ({
-    matricule: normalizeSpaces(item.matricule),
-    cin: cleanDigits(item.cin),
-    nom: normalizeSpaces(item.nom),
-    prenom: normalizeSpaces(item.prenom),
-    email: cleanEmail(item.email),
-    grade: normalizeSpaces(item.grade),
-    numTel: cleanDigits(item.numTel),
-    dateRecrutement: String(item.dateRecrutement || "").trim(),
-    typeContrat: normalizeSpaces(item.typeContrat),
-    dateTitularisation: String(item.dateTitularisation || "").trim(),
-    statutAdministratif: normalizeSpaces(item.statutAdministratif),
-    diplome: {
-      idDiplome: normalizeSpaces(item.idDiplome),
-      libelleDiplome: normalizeSpaces(item.libelleDiplome),
-      specialite: normalizeSpaces(item.specialite),
-      dateObtention: String(item.dateObtention || "").trim()
-    }
-  });
-
-  const normalizeHeader = (header) =>
-    String(header)
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, " ")
-      .replace(/[^a-z0-9 ]/g, "");
-
-  const parseCsvLine = (line) => {
-    const parts = [];
-    const regex = /(?:"([^"]*(?:""[^"]*)*)"|([^",]*))(?:,|$)/g;
-    let match;
-    while ((match = regex.exec(line))) {
-      let value = match[1] || match[2] || "";
-      value = value.replace(/""/g, '"');
-      parts.push(value.trim());
-    }
-    return parts;
-  };
-
-  const parseCsv = (text) => {
-    const rows = text
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    if (rows.length < 2) return [];
-
-    const rawHeaders = parseCsvLine(rows[0]);
-    const headers = rawHeaders.map((field) => {
-      const normalized = normalizeHeader(field);
-      switch (normalized) {
-        case "matricule":
-          return "matricule";
-        case "cin":
-          return "cin";
-        case "nom":
-          return "nom";
-        case "prenom":
-          return "prenom";
-        case "email":
-          return "email";
-        case "grade":
-          return "grade";
-        case "telephone":
-        case "numtel":
-        case "num tel":
-          return "numTel";
-        case "daterecrutement":
-        case "date recrutement":
-          return "dateRecrutement";
-        case "typecontrat":
-        case "type contrat":
-          return "typeContrat";
-        case "datetitularisation":
-        case "date titularisation":
-          return "dateTitularisation";
-        case "statutadministratif":
-        case "statut administratif":
-          return "statutAdministratif";
-        case "iddiplome":
-        case "id diplome":
-          return "idDiplome";
-        case "libellediplome":
-        case "libelle diplome":
-          return "libelleDiplome";
-        case "specialite":
-          return "specialite";
-        case "dateobtention":
-        case "date obtention":
-          return "dateObtention";
-        default:
-          return normalized;
-      }
-    });
-
-    return rows.slice(1).map((line) => {
-      const values = parseCsvLine(line);
-      return headers.reduce((acc, header, index) => {
-        acc[header] = values[index] ?? "";
-        return acc;
-      }, {});
-    });
-  };
-
   const handleDelete = async (matricule) => {
     if (!window.confirm("Voulez-vous vraiment supprimer cet enseignant ?")) return;
     try {
@@ -272,30 +159,34 @@ function GestionEnseignants() {
 
   const handleImportClick = () => fileRef.current.click();
 
-  const handleImport = (e) => {
+  const handleImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      let importedData = [];
-      const text = reader.result;
+    try {
+      const data = await parseFile(file);
+      
+      const normalizeHeader = (header) =>
+        String(header)
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, " ")
+          .replace(/[^a-z0-9 ]/g, "");
 
-      if (file.name.toLowerCase().endsWith(".json")) {
-        try {
-          importedData = JSON.parse(text);
-        } catch (error) {
-          setErrorMessage("Impossible de lire le fichier JSON.");
-          return;
-        }
-      } else {
-        importedData = parseCsv(text);
-      }
-
-      if (!Array.isArray(importedData) || !importedData.length) {
-        setErrorMessage("Aucune donnée importable trouvée.");
-        return;
-      }
+      const importedData = data.map(row => {
+        return Object.keys(row).reduce((acc, key) => {
+          const normKey = normalizeHeader(key);
+          let finalKey = normKey;
+          if (normKey === 'numtel' || normKey === 'num tel' || normKey === 'telephone') finalKey = 'numTel';
+          if (normKey === 'daterecrutement' || normKey === 'date recrutement') finalKey = 'dateRecrutement';
+          if (normKey === 'typecontrat' || normKey === 'type contrat') finalKey = 'typeContrat';
+          if (normKey === 'datetitularisation' || normKey === 'date titularisation') finalKey = 'dateTitularisation';
+          if (normKey === 'statutadministratif' || normKey === 'statut administratif') finalKey = 'statutAdministratif';
+          
+          acc[finalKey] = row[key];
+          return acc;
+        }, {});
+      });
 
       const cleanedData = importedData
         .map((item) => ({
@@ -311,30 +202,28 @@ function GestionEnseignants() {
         }))
         .filter((item) => item.matricule && item.nom && item.prenom);
 
-      if (!cleanedData.length) {
-        setErrorMessage("Aucune ligne valide trouvée après nettoyage.");
-        return;
-      }
-
-      try {
-        // Envoyer chaque enseignant à l'API
-        for (const enseignant of cleanedData) {
-          try {
-            await axios.post('/api/enseignants/', enseignant);
-          } catch (itemErr) {
-            // Continuer même si une ligne échoue
-            console.error(`Erreur pour ${enseignant.matricule}:`, itemErr);
-          }
+      // Envoi des données parsées à l'API
+      let successCount = 0;
+      for (const item of cleanedData) {
+        try {
+          await axios.post('/api/enseignants/', item);
+          successCount++;
+        } catch (itemErr) {
+          console.error(`Erreur pour ${item.matricule}:`, itemErr);
         }
-        setSuccessMessage(`${cleanedData.length} enseignant(s) importé(s)`);
-        setErrorMessage('');
-        loadData();
-      } catch (err) {
-        setErrorMessage('Erreur lors de l\'import');
       }
-    };
-
-    reader.readAsText(file);
+      
+      setSuccessMessage(`${successCount} enseignant(s) importé(s) avec succès`);
+      setErrorMessage('');
+      await loadData();
+      setTimeout(() => setSuccessMessage(""), 3000);
+      
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Erreur lors de l'importation: " + (err.message || "Veuillez vérifier le format de vos données."));
+    } finally {
+      if (fileRef.current) fileRef.current.value = "";
+    }
   };
 
   // Filtrage
@@ -345,28 +234,27 @@ function GestionEnseignants() {
     const searchInField = (fieldValue) => 
       String(fieldValue || "").toLowerCase().includes(term);
     
-    switch (filterBy) {
-      case "Matricule":
-        return searchInField(e.matricule);
-      case "CIN":
-        return searchInField(e.cin);
-      case "Nom":
-        return searchInField(e.nom);
-      case "Prénom":
-        return searchInField(e.prenom);
-      case "Email":
-        return searchInField(e.email);
-      case "Grade":
-        return searchInField(e.grade);
-      default:
-        return (
-          searchInField(e.matricule) ||
-          searchInField(e.cin) ||
-          searchInField(e.nom) ||
-          searchInField(e.prenom) ||
-          searchInField(e.email) ||
-          searchInField(e.grade)
-        );
+    if (filterBy.includes("Tous les champs")) {
+      return (
+        searchInField(e.matricule) ||
+        searchInField(e.cin) ||
+        searchInField(e.nom) ||
+        searchInField(e.prenom) ||
+        searchInField(e.email) ||
+        searchInField(e.grade)
+      );
+    } else {
+      return filterBy.some(field => {
+        switch (field) {
+          case "Matricule": return searchInField(e.matricule);
+          case "CIN": return searchInField(e.cin);
+          case "Nom": return searchInField(e.nom);
+          case "Prénom": return searchInField(e.prenom);
+          case "Email": return searchInField(e.email);
+          case "Grade": return searchInField(e.grade);
+          default: return false;
+        }
+      });
     }
   });
 
@@ -381,20 +269,16 @@ function GestionEnseignants() {
       ) : (
         <>
           <div className="page-container">
-            <div className="search-area">
-              <select
-                className="filter-select"
-                value={filterBy}
-                onChange={(e) => setFilterBy(e.target.value)}
-              >
-                <option>Tous les champs</option>
-                <option>Matricule</option>
-                <option>CIN</option>
-                <option>Nom</option>
-                <option>Prénom</option>
-                <option>Email</option>
-                <option>Grade</option>
-              </select>
+            <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
+                <MultiSelectDropdown
+                  label="Tous les champs sélectionnés"
+                  options={["Tous les champs", "Matricule", "CIN", "Nom", "Prénom", "Email", "Grade"]}
+                  selected={filterBy}
+                  onChange={setFilterBy}
+                />
+              </div>
 
               <input
                 type="text"
@@ -424,9 +308,9 @@ function GestionEnseignants() {
 
           <input
             type="file"
-            accept=".csv,.json"
             ref={fileRef}
             style={{ display: "none" }}
+            accept=".csv,.json,.xlsx,.xls"
             onChange={handleImport}
           />
 
@@ -462,6 +346,7 @@ function GestionEnseignants() {
               setShowForm(true);
             }}
             onDelete={handleDelete}
+            filterBy={filterBy}
           />
 
           <DiplomesEnseignant enseignants={filteredEnseignants} />

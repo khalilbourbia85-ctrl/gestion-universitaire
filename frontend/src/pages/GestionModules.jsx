@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import ModuleForm from '../components/ModuleForm';
 import ModuleTable from '../components/ModuleTable';
+import { parseFile } from "../utils/fileParser";
 import './GestionEtudiants.css';
 
 const GestionModules = () => {
@@ -211,21 +212,56 @@ const GestionModules = () => {
     const file = event.target.files[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const response = await axios.post('/api/modules/import-excel/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      const data = await parseFile(file);
+
+      const normalizeHeader = (header) =>
+        String(header)
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, " ")
+          .replace(/[^a-z0-9 ]/g, "");
+
+      const importedData = data.map(row => {
+        return Object.keys(row).reduce((acc, key) => {
+          const normKey = normalizeHeader(key);
+          let finalKey = normKey;
+          if (normKey === 'nom' || normKey === 'intitule') finalKey = 'nom';
+          if (normKey === 'code' || normKey === 'identifiant') finalKey = 'code';
+          if (normKey === 'specialite' || normKey === 'spécialité') finalKey = 'specialite';
+          if (normKey === 'annee' || normKey === 'année') finalKey = 'annee';
+          if (normKey === 'semestre') finalKey = 'semestre';
+          if (normKey === 'volumecours' || normKey === 'volume cours' || normKey === 'volume_cours') finalKey = 'volume_cours';
+          if (normKey === 'volumetd' || normKey === 'volume td' || normKey === 'volume_td') finalKey = 'volume_td';
+          if (normKey === 'volumetp' || normKey === 'volume tp' || normKey === 'volume_tp') finalKey = 'volume_tp';
+          
+          acc[finalKey] = row[key];
+          return acc;
+        }, {});
       });
-      setMessage('Modules importés avec succès !');
+
+      if (!Array.isArray(importedData) || !importedData.length) {
+        setError("Aucune donnée importable trouvée.");
+        return;
+      }
+
+      let successCount = 0;
+      for (const record of importedData) {
+        try {
+          await axios.post('/api/modules/', record);
+          successCount++;
+        } catch (itemErr) {
+          console.error(`Erreur lors de l'import:`, itemErr);
+        }
+      }
+      setMessage(`${successCount} module(s) importé(s) avec succès !`);
       setError('');
       fetchModules();
-    } catch (error) {
-      setError('Erreur lors de l\'importation : ' + (error.response?.data?.error || error.message));
-      setMessage('');
+    } catch (err) {
+      console.error(err);
+      setError("Erreur lors de l'importation: " + (err.message || "Veuillez vérifier le format de vos données."));
+    } finally {
+      event.target.value = null;
     }
   };
 
@@ -316,13 +352,13 @@ const GestionModules = () => {
           {showForm ? 'Annuler' : '+ Nouveau Module'}
         </button>
         <button className="btn btn-import" onClick={handleImportExcel}>
-          📥 Importer Excel
+          📥 Importer fichier
         </button>
         <input
           type="file"
           ref={fileRef}
           onChange={handleFileChange}
-          accept=".xlsx,.xls"
+          accept=".csv,.json,.xlsx,.xls"
           style={{ display: 'none' }}
         />
       </div>

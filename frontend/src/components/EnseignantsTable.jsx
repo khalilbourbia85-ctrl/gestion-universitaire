@@ -1,7 +1,9 @@
 import React from "react";
 import "./Table.css";
 
-function EnseignantsTable({ enseignants,onEdit,onDelete }) {
+function EnseignantsTable({ enseignants,onEdit,onDelete, filterBy = ['Tous les champs'] }) {
+
+const showField = (field) => Array.isArray(filterBy) ? (filterBy.includes('Tous les champs') || filterBy.includes(field)) : (filterBy === 'Tous les champs' || filterBy === field);
 
 return(
 
@@ -11,15 +13,15 @@ return(
 
 <tr>
   <th>🆔 Matricule</th>
-  <th>📝 CIN</th>
-  <th>👤 Nom</th>
-  <th>🧑‍🎓 Prénom</th>
-  <th>📧 Email</th>
-  <th>📱 Téléphone</th>
-  <th>📅 Date recrutement</th>
-  <th>📄 Type contrat</th>
-  <th>�️ Statut Administratif</th>
-  <th>�🎓 Diplôme</th>
+  {showField('CIN') && <th>📝 CIN</th>}
+  {showField('Nom') && <th>👤 Nom</th>}
+  {showField('Prénom') && <th>🧑‍🎓 Prénom</th>}
+  {showField('Email') && <th>📧 Email</th>}
+  {filterBy === 'Tous les champs' && <th>📱 Téléphone</th>}
+  {filterBy === 'Tous les champs' && <th>📅 Date recrutement</th>}
+  {filterBy === 'Tous les champs' && <th>📄 Type contrat</th>}
+  {filterBy === 'Tous les champs' && <th>⚙️ Statut Administratif</th>}
+  {filterBy === 'Tous les champs' && <th>🎓 Diplôme</th>}
   <th>⚙️ Actions</th>
 </tr>
 
@@ -31,15 +33,15 @@ return(
 <tr key={e.matricule}>
 
 <td>{e.matricule}</td>
-<td>{e.cin}</td>
-<td>{e.nom}</td>
-<td>{e.prenom}</td>
-<td>{e.email}</td>
-<td>{e.numTel}</td>
-<td>{e.dateRecrutement}</td>
-<td>{e.typeContrat}</td>
-<td>{e.statutAdministratif}</td>
-<td>{e.diplome?.libelleDiplome}</td>
+{showField('CIN') && <td>{e.cin}</td>}
+{showField('Nom') && <td>{e.nom}</td>}
+{showField('Prénom') && <td>{e.prenom}</td>}
+{showField('Email') && <td>{e.email}</td>}
+{filterBy === 'Tous les champs' && <td>{e.numTel}</td>}
+{filterBy === 'Tous les champs' && <td>{e.dateRecrutement}</td>}
+{filterBy === 'Tous les champs' && <td>{e.typeContrat}</td>}
+{filterBy === 'Tous les champs' && <td>{e.statutAdministratif}</td>}
+{filterBy === 'Tous les champs' && <td>{e.diplome?.libelleDiplome}</td>}
 
 <td>
   <button

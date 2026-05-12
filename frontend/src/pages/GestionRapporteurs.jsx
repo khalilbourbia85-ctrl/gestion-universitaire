@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import RapporteursTable from '../components/RapporteursTable';
 import RapporteursForm from '../components/RapporteursForm';
+import { parseFile } from "../utils/fileParser";
 import './GestionEtudiants.css';
 
 function GestionRapporteurs() {
@@ -114,25 +115,34 @@ function GestionRapporteurs() {
 
   const handleImportClick = () => fileRef.current.click();
 
-  const handleImport = (e) => {
+  const handleImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      let importedData = [];
-      const text = reader.result;
+    try {
+      const data = await parseFile(file);
 
-      if (file.name.toLowerCase().endsWith(".json")) {
-        try {
-          importedData = JSON.parse(text);
-        } catch (error) {
-          setError("Impossible de lire le fichier JSON.");
-          return;
-        }
-      } else {
-        importedData = parseCsv(text);
-      }
+      const normalizeHeader = (header) =>
+        String(header)
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, " ")
+          .replace(/[^a-z0-9 ]/g, "");
+
+      const importedData = data.map(row => {
+        return Object.keys(row).reduce((acc, key) => {
+          const normKey = normalizeHeader(key);
+          let finalKey = normKey;
+          if (normKey === 'numtel' || normKey === 'num tel' || normKey === 'telephone' || normKey === 'téléphone') finalKey = 'numTel';
+          if (normKey === 'daterecrutement' || normKey === 'date recrutement' || normKey === 'date_recrutement') finalKey = 'dateRecrutement';
+          if (normKey === 'typecontrat' || normKey === 'type contrat') finalKey = 'typeContrat';
+          if (normKey === 'statutadministratif' || normKey === 'statut administratif' || normKey === 'statut_administratif') finalKey = 'statutAdministratif';
+          if (normKey === 'prénom') finalKey = 'prenom';
+          
+          acc[finalKey] = row[key];
+          return acc;
+        }, {});
+      });
 
       if (!Array.isArray(importedData) || !importedData.length) {
         setError("Aucune donnée importable trouvée.");
@@ -158,23 +168,24 @@ function GestionRapporteurs() {
         return;
       }
 
-      try {
-        for (const rapporteur of cleanedData) {
-          try {
-            await axios.post('/api/rapporteurs/', rapporteur);
-          } catch (itemErr) {
-            console.error(`Erreur pour ${rapporteur.matricule}:`, itemErr);
-          }
+      let successCount = 0;
+      for (const rapporteur of cleanedData) {
+        try {
+          await axios.post('/api/rapporteurs/', rapporteur);
+          successCount++;
+        } catch (itemErr) {
+          console.error(`Erreur pour ${rapporteur.matricule}:`, itemErr);
         }
-        setMessage(`${cleanedData.length} rapporteur(s) importé(s)`);
-        setError('');
-        loadData();
-      } catch (err) {
-        setError('Erreur lors de l\'import');
       }
-    };
-
-    reader.readAsText(file);
+      setMessage(`${successCount} rapporteur(s) importé(s) avec succès`);
+      setError('');
+      loadData();
+    } catch (err) {
+      console.error(err);
+      setError("Erreur lors de l'importation: " + (err.message || "Veuillez vérifier le format de vos données."));
+    } finally {
+      if (fileRef.current) fileRef.current.value = "";
+    }
   };
 
   const normalizeSpaces = (value) =>
@@ -310,7 +321,7 @@ function GestionRapporteurs() {
 
           <input
             type="file"
-            accept=".csv,.json"
+            accept=".csv,.json,.xlsx,.xls"
             ref={fileRef}
             style={{ display: "none" }}
             onChange={handleImport}

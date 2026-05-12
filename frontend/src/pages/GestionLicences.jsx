@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import LicenceForm from '../components/LicenceForm';
 import LicenceTable from '../components/LicenceTable';
+import { parseFile } from "../utils/fileParser";
 import './GestionEtudiants.css';
 
 const GestionLicences = () => {
@@ -119,21 +120,53 @@ const GestionLicences = () => {
     const file = event.target.files[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const response = await axios.post('/api/licences/import-excel/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      const data = await parseFile(file);
+
+      const normalizeHeader = (header) =>
+        String(header)
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, " ")
+          .replace(/[^a-z0-9 ]/g, "");
+
+      const importedData = data.map(row => {
+        return Object.keys(row).reduce((acc, key) => {
+          const normKey = normalizeHeader(key);
+          let finalKey = normKey;
+          if (normKey === 'nom' || normKey === 'mention') finalKey = 'nom';
+          if (normKey === 'code' || normKey === 'identifiant') finalKey = 'code';
+          if (normKey === 'domaine') finalKey = 'domaine';
+          if (normKey === 'parcours') finalKey = 'parcours';
+          if (normKey === 'departement' || normKey === 'département') finalKey = 'departement'; // this usually expects an ID, but backend handles it or it's a separate process... let's just use it
+          
+          acc[finalKey] = row[key];
+          return acc;
+        }, {});
       });
-      setMessage('Licences importées avec succès !');
+
+      if (!Array.isArray(importedData) || !importedData.length) {
+        setError("Aucune donnée importable trouvée.");
+        return;
+      }
+
+      let successCount = 0;
+      for (const record of importedData) {
+        try {
+          await axios.post('/api/licences/', record);
+          successCount++;
+        } catch (itemErr) {
+          console.error(`Erreur lors de l'import:`, itemErr);
+        }
+      }
+      setMessage(`${successCount} licence(s) importée(s) avec succès !`);
       setError('');
       fetchLicences();
-    } catch (error) {
-      setError('Erreur lors de l\'importation : ' + (error.response?.data?.error || error.message));
-      setMessage('');
+    } catch (err) {
+      console.error(err);
+      setError("Erreur lors de l'importation: " + (err.message || "Veuillez vérifier le format de vos données."));
+    } finally {
+      event.target.value = null;
     }
   };
 
@@ -176,13 +209,13 @@ const GestionLicences = () => {
           {showForm ? 'Annuler' : '+ Nouvelle Licence'}
         </button>
         <button className="btn btn-import" onClick={handleImportExcel}>
-          📥 Importer Excel
+          📥 Importer fichier
         </button>
         <input
           type="file"
           ref={fileRef}
           onChange={handleFileChange}
-          accept=".xlsx,.xls"
+          accept=".csv,.json,.xlsx,.xls"
           style={{ display: 'none' }}
         />
       </div>

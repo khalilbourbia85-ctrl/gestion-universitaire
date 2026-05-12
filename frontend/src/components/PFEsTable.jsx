@@ -10,6 +10,7 @@ function PFEsTable({
   encadrantGroupCount,
   getEncadrantMaxGroupes,
   disableActions = false,
+  filterBy = 'Tous les champs',
 }) {
   const safePFEs = Array.isArray(pfes) ? pfes : [];
 
@@ -25,6 +26,8 @@ function PFEsTable({
   };
 
   const canAssignRandom = getAvailableEncadrantCount() > 0;
+
+  const showField = (field) => Array.isArray(filterBy) ? (filterBy.includes('Tous les champs') || filterBy.includes(field)) : (filterBy === 'Tous les champs' || filterBy === field);
 
   const renderStudents = (item) => {
     if (!Array.isArray(item?.etudiants_detail) || item.etudiants_detail.length === 0) {
@@ -59,13 +62,13 @@ function PFEsTable({
       <thead>
         <tr>
           <th style={{ width: '60px' }}>ID PFE</th>
-          <th style={{ width: '25%' }}>Sujet</th>
-          <th style={{ width: '100px' }}>Durée (en mois)</th>
-          <th style={{ width: '15%' }}>Lieu de stage</th>
-          <th style={{ width: '15%' }}>Spécialité</th>
-          <th style={{ width: '25%' }}>Étudiants</th>
-          <th style={{ width: '15%' }}>Encadrant</th>
-          <th style={{ width: '12%' }}>Type contrat (enc.)</th>
+          {showField('Sujet') && <th style={{ width: '25%' }}>Sujet</th>}
+          {filterBy === 'Tous les champs' && <th style={{ width: '100px' }}>Durée (en mois)</th>}
+          {showField('Lieu de stage') && <th style={{ width: '15%' }}>Lieu de stage</th>}
+          {showField('Spécialité') && <th style={{ width: '15%' }}>Spécialité</th>}
+          {filterBy === 'Tous les champs' && <th style={{ width: '25%' }}>Étudiants</th>}
+          {showField('Encadrant') && <th style={{ width: '15%' }}>Encadrant</th>}
+          {showField('Type contrat enc.') && <th style={{ width: '12%' }}>Type contrat (enc.)</th>}
           <th style={{ width: '150px' }}>Actions</th>
         </tr>
       </thead>
@@ -73,13 +76,13 @@ function PFEsTable({
         {safePFEs.map((pfe, index) => (
           <tr key={pfe?.idPfe ?? `pfe-${index}`}>
             <td>{pfe?.idPfe ?? '-'}</td>
-            <td>{pfe?.sujet ?? '-'}</td>
-            <td>{pfe?.duree ? `${pfe.duree} mois` : '-'}</td>
-            <td>{pfe?.lieu_stage ?? '-'}</td>
-            <td>{pfe?.specialite ?? '-'}</td>
-            <td>{renderStudents(pfe)}</td>
-            <td>{pfe?.encadrant_detail ? `${pfe.encadrant_detail.nom} ${pfe.encadrant_detail.prenom}` : '-'}</td>
-            <td>{pfe?.encadrant_detail?.typeContrat || '—'}</td>
+            {showField('Sujet') && <td>{pfe?.sujet ?? '-'}</td>}
+            {filterBy === 'Tous les champs' && <td>{pfe?.duree ? `${pfe.duree} mois` : '-'}</td>}
+            {showField('Lieu de stage') && <td>{pfe?.lieu_stage ?? '-'}</td>}
+            {showField('Spécialité') && <td>{pfe?.specialite ?? '-'}</td>}
+            {filterBy === 'Tous les champs' && <td>{renderStudents(pfe)}</td>}
+            {showField('Encadrant') && <td>{pfe?.encadrant_detail ? `${pfe.encadrant_detail.nom} ${pfe.encadrant_detail.prenom}` : '-'}</td>}
+            {showField('Type contrat enc.') && <td>{pfe?.encadrant_detail?.typeContrat || '—'}</td>}
             <td>
               {!disableActions ? (
                 <>
