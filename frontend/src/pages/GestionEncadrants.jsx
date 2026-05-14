@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import axios from 'axios';
 import EncadrantsTable from '../components/EncadrantsTable';
 import EncadrantsForm from '../components/EncadrantsForm';
+import MultiSelectDropdown from "../components/MultiSelectDropdown";
 import { parseFile } from "../utils/fileParser";
 import './GestionEtudiants.css';
 
@@ -24,7 +25,7 @@ function GestionEncadrants() {
   const [selectedEncadrant, setSelectedEncadrant] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterBy, setFilterBy] = useState('Tous les champs');
+  const [filterBy, setFilterBy] = useState(['Tous les champs']);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -80,23 +81,9 @@ function GestionEncadrants() {
   const filteredEnseignants = enseignants.filter((e) => {
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
-    switch (filterBy) {
-      case "Matricule":
-        return String(e.matricule || "").toLowerCase().includes(term);
-      case "CIN":
-        return e.cin.toLowerCase().includes(term);
-      case "Nom":
-        return e.nom.toLowerCase().includes(term);
-      case "Prénom":
-        return e.prenom.toLowerCase().includes(term);
-      case "Email":
-        return e.email.toLowerCase().includes(term);
-      case "Grade":
-        return e.grade.toLowerCase().includes(term);
-      case "Type contrat":
-        return String(e.typeContrat || "").toLowerCase().includes(term);
-      default:
-        return (
+
+    if (filterBy.includes("Tous les champs")) {
+      return (
           String(e.matricule || "").toLowerCase().includes(term) ||
           e.cin.toLowerCase().includes(term) ||
           e.nom.toLowerCase().includes(term) ||
@@ -104,7 +91,28 @@ function GestionEncadrants() {
           e.email.toLowerCase().includes(term) ||
           e.grade.toLowerCase().includes(term) ||
           String(e.typeContrat || "").toLowerCase().includes(term)
-        );
+      );
+    } else {
+      return filterBy.some(field => {
+        switch (field) {
+          case "Matricule":
+            return String(e.matricule || "").toLowerCase().includes(term);
+          case "CIN":
+            return e.cin.toLowerCase().includes(term);
+          case "Nom":
+            return e.nom.toLowerCase().includes(term);
+          case "Prénom":
+            return e.prenom.toLowerCase().includes(term);
+          case "Email":
+            return e.email.toLowerCase().includes(term);
+          case "Grade":
+            return e.grade.toLowerCase().includes(term);
+          case "Type contrat":
+            return String(e.typeContrat || "").toLowerCase().includes(term);
+          default:
+            return false;
+        }
+      });
     }
   });
 
@@ -349,21 +357,25 @@ function GestionEncadrants() {
       ) : (
         <>
           <div className="page-container">
-            <div className="search-area">
-              <select
-                className="filter-select"
-                value={filterBy}
-                onChange={(e) => setFilterBy(e.target.value)}
-              >
-                <option>Tous les champs</option>
-                <option>Matricule</option>
-                <option>CIN</option>
-                <option>Nom</option>
-                <option>Prénom</option>
-                <option>Email</option>
-                <option>Grade</option>
-                <option>Type contrat</option>
-              </select>
+            <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
+                <MultiSelectDropdown
+                  label="Tous les champs sélectionnés"
+                  options={[
+                    "Tous les champs",
+                    "Matricule",
+                    "CIN",
+                    "Nom",
+                    "Prénom",
+                    "Email",
+                    "Grade",
+                    "Type contrat"
+                  ]}
+                  selected={filterBy}
+                  onChange={setFilterBy}
+                />
+              </div>
 
               <input
                 type="text"
@@ -400,6 +412,7 @@ function GestionEncadrants() {
             onEdit={handleOpenForm}
             onDelete={handleDeleteEncadrant}
             encadrantAuPlafondPfe={encadrantAuPlafondPfe}
+            filterBy={filterBy}
           />
         </>
       )}

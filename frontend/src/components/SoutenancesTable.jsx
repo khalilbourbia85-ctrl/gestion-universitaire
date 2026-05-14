@@ -7,23 +7,24 @@ function formatHeureApi(h) {
   return s.length >= 5 ? s.slice(0, 5) : s;
 }
 
-function SoutenancesTable({ soutenances, onEdit, onDelete }) {
+function SoutenancesTable({ soutenances, onEdit, onDelete, filterBy = ['Tous les champs'] }) {
   const safeSoutenances = Array.isArray(soutenances) ? soutenances : [];
+  const showField = (field) => Array.isArray(filterBy) ? (filterBy.includes('Tous les champs') || filterBy.includes(field)) : (filterBy === 'Tous les champs' || filterBy === field);
 
   return (
     <table className="table">
       <thead>
         <tr>
           <th>ID</th>
-          <th>Date</th>
-          <th>Heure</th>
-          <th>Durée (min)</th>
-          <th>Salle</th>
-          <th>Encadrant</th>
-          <th>Type contrat (enc.)</th>
-          <th>Rapporteur</th>
-          <th>Type contrat (rap.)</th>
-          <th>Étudiants</th>
+          {showField('Date') && <th>Date</th>}
+          {showField('Heure') && <th>Heure</th>}
+          {filterBy.includes('Tous les champs') && <th>Durée (min)</th>}
+          {showField('Salle') && <th>Salle</th>}
+          {showField('Encadrant') && <th>Encadrant</th>}
+          {showField('Type contrat (enc.)') && <th>Type contrat (enc.)</th>}
+          {showField('Rapporteur') && <th>Rapporteur</th>}
+          {showField('Type contrat (rap.)') && <th>Type contrat (rap.)</th>}
+          {filterBy.includes('Tous les champs') && <th>Étudiants</th>}
           <th>Actions</th>
         </tr>
       </thead>
@@ -36,34 +37,34 @@ function SoutenancesTable({ soutenances, onEdit, onDelete }) {
           safeSoutenances.map((soutenance) => (
             <tr key={soutenance.idSoutenance}>
               <td>{soutenance.idSoutenance}</td>
-              <td>{new Date(soutenance.date_soutenance).toLocaleDateString('fr-FR')}</td>
-              <td>{formatHeureApi(soutenance.heure_soutenance)}</td>
-              <td>{soutenance.duree}</td>
-              <td>{soutenance.salle}</td>
-              <td>
+              {showField('Date') && <td>{new Date(soutenance.date_soutenance).toLocaleDateString('fr-FR')}</td>}
+              {showField('Heure') && <td>{formatHeureApi(soutenance.heure_soutenance)}</td>}
+              {filterBy.includes('Tous les champs') && <td>{soutenance.duree}</td>}
+              {showField('Salle') && <td>{soutenance.salle}</td>}
+              {showField('Encadrant') && <td>
                 {soutenance.encadrant_detail
                   ? `${soutenance.encadrant_detail.nom} ${soutenance.encadrant_detail.prenom}`
                   : soutenance.encadrant}
-              </td>
-              <td>{soutenance.encadrant_detail?.typeContrat || '—'}</td>
-              <td>
+              </td>}
+              {showField('Type contrat (enc.)') && <td>{soutenance.encadrant_detail?.typeContrat || '—'}</td>}
+              {showField('Rapporteur') && <td>
                 {soutenance.rapporteur_detail
                   ? `${soutenance.rapporteur_detail.nom} ${soutenance.rapporteur_detail.prenom}`
                   : soutenance.rapporteur}
-              </td>
-              <td>{soutenance.rapporteur_detail?.typeContrat || '—'}</td>
-              <td>
+              </td>}
+              {showField('Type contrat (rap.)') && <td>{soutenance.rapporteur_detail?.typeContrat || '—'}</td>}
+              {filterBy.includes('Tous les champs') && <td>
                 {soutenance.etudiants_detail && soutenance.etudiants_detail.length > 0
                   ? soutenance.etudiants_detail.map((e) => `${e.nom} ${e.prenom}`).join(', ')
                   : soutenance.etudiants.join(', ')}
-              </td>
+              </td>}
               <td>
-                <button className="action-button edit-icon" type="button" onClick={() => onEdit(soutenance)}>
-                  Modifier
-                </button>
-                <button className="action-button delete-icon" type="button" onClick={() => onDelete(soutenance.idSoutenance)}>
-                  Supprimer
-                </button>
+                <span className="icon edit-icon" onClick={() => onEdit(soutenance)}>
+                  ✏️
+                </span>
+                <span className="icon delete-icon" onClick={() => onDelete(soutenance.idSoutenance)}>
+                  🗑️
+                </span>
               </td>
             </tr>
           ))

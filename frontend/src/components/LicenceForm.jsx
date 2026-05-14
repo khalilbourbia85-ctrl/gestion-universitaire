@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './LicenceForm.css';
+import './EtudiantForm.css';
 
 const LicenceForm = ({ onSubmit, selectedLicence, onCancel, departements }) => {
   const [formData, setFormData] = useState({
@@ -53,81 +53,85 @@ const LicenceForm = ({ onSubmit, selectedLicence, onCancel, departements }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="licence-form">
-      <div className="form-group">
-        <label>Mention *</label>
-        <input
-          type="text"
-          name="nom"
-          value={formData.nom}
-          onChange={handleChange}
-          className={errors.nom ? 'input-error' : ''}
-        />
-        {errors.nom && <span className="error">{errors.nom}</span>}
+    <form onSubmit={handleSubmit}>
+      <h3 className="form-title">{selectedLicence ? 'Modifier la licence' : 'Nouvelle Licence'}</h3>
+      <div className="form-grid">
+        <div className="input-group">
+          <label>Mention *</label>
+          <input
+            type="text"
+            name="nom"
+            value={formData.nom}
+            onChange={handleChange}
+            className={errors.nom ? 'input-error' : ''}
+          />
+          {errors.nom && <span className="error" style={{color: '#dc3545', fontSize: '12px'}}>{errors.nom}</span>}
+        </div>
+
+        <div className="input-group">
+          <label>Domaine</label>
+          <input
+            type="text"
+            name="domaine"
+            value={formData.domaine}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="input-group">
+          <label>Parcours (Spécialités)</label>
+          <input
+            type="text"
+            name="parcours"
+            value={formData.parcours}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="input-group">
+          <label>Département *</label>
+          <select
+            name="departement"
+            value={formData.departement}
+            onChange={handleChange}
+            className={errors.departement ? 'input-error' : ''}
+          >
+            <option value="">Sélectionner un département</option>
+            {departements.map(dept => (
+              <option key={dept.id} value={dept.id}>{dept.nom}</option>
+            ))}
+          </select>
+          {errors.departement && <span className="error" style={{color: '#dc3545', fontSize: '12px'}}>{errors.departement}</span>}
+        </div>
+
+        <div className="input-group">
+          <label>Durée</label>
+          <input
+            type="text"
+            name="duree"
+            value={formData.duree}
+            onChange={handleChange}
+            placeholder="ex: 3 ans"
+          />
+        </div>
       </div>
 
-      <div className="form-group">
-        <label>Domaine</label>
-        <input
-          type="text"
-          name="domaine"
-          value={formData.domaine}
-          onChange={handleChange}
-        />
-      </div>
-
-      <div className="form-group">
-        <label>Parcours (Spécialités)</label>
-        <input
-          type="text"
-          name="parcours"
-          value={formData.parcours}
-          onChange={handleChange}
-        />
-      </div>
-
-      <div className="form-group">
-        <label>Département *</label>
-        <select
-          name="departement"
-          value={formData.departement}
-          onChange={handleChange}
-          className={errors.departement ? 'input-error' : ''}
-        >
-          <option value="">Sélectionner un département</option>
-          {departements.map(dept => (
-            <option key={dept.id} value={dept.id}>{dept.nom}</option>
-          ))}
-        </select>
-        {errors.departement && <span className="error">{errors.departement}</span>}
-      </div>
-
-      <div className="form-group">
-        <label>Durée</label>
-        <input
-          type="text"
-          name="duree"
-          value={formData.duree}
-          onChange={handleChange}
-          placeholder="ex: 3 ans"
-        />
-      </div>
-
-      <div className="form-group">
+      <div className="input-group" style={{ marginBottom: '16px' }}>
         <label>Description</label>
         <textarea
           name="description"
           value={formData.description}
           onChange={handleChange}
           rows="3"
+          style={{ width: '100%', padding: '12px 16px', border: '2px solid #e2e8f0', borderRadius: '8px' }}
         />
       </div>
 
       <div className="form-buttons">
-        <button type="submit" className="btn-submit">
+        <button type="submit" className="btn save-btn">
           {selectedLicence ? 'Mettre à jour' : 'Ajouter'}
         </button>
-        <button type="button" className="btn-cancel" onClick={onCancel}>
+        <button type="button" className="btn cancel-btn" onClick={onCancel}>
           Annuler
         </button>
       </div>
@@ -136,3 +140,4 @@ const LicenceForm = ({ onSubmit, selectedLicence, onCancel, departements }) => {
 };
 
 export default LicenceForm;
+

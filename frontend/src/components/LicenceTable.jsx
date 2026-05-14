@@ -2,17 +2,19 @@ import React from 'react';
 import './Table.css';
 import { FaEdit, FaTrash } from 'react-icons/fa';
 
-const LicenceTable = ({ licences, onEdit, onDelete }) => {
+const LicenceTable = ({ licences, onEdit, onDelete, filterBy = ['Tous les champs'] }) => {
+  const showField = (field) => Array.isArray(filterBy) ? (filterBy.includes('Tous les champs') || filterBy.includes(field)) : (filterBy === 'Tous les champs' || filterBy === field);
+
   return (
     <table className="table">
       <thead>
         <tr>
           <th>ID</th>
-          <th>Mention</th>
-          <th>Domaine</th>
-          <th>Parcours</th>
-          <th>Département</th>
-          <th>Durée</th>
+          {showField('Mention') && <th>Mention</th>}
+          {showField('Domaine') && <th>Domaine</th>}
+          {showField('Parcours') && <th>Parcours</th>}
+          {showField('Département') && <th>Département</th>}
+          {filterBy.includes('Tous les champs') && <th>Durée</th>}
           <th>Actions</th>
         </tr>
       </thead>
@@ -21,11 +23,11 @@ const LicenceTable = ({ licences, onEdit, onDelete }) => {
           licences.map(lic => (
             <tr key={lic.id}>
               <td>{lic.id}</td>
-              <td>{lic.nom}</td>
-              <td>{lic.domaine}</td>
-              <td>{lic.parcours}</td>
-              <td>{lic.departement_nom}</td>
-              <td>{lic.duree}</td>
+              {showField('Mention') && <td>{lic.nom}</td>}
+              {showField('Domaine') && <td>{lic.domaine}</td>}
+              {showField('Parcours') && <td>{lic.parcours}</td>}
+              {showField('Département') && <td>{lic.departement_nom}</td>}
+              {filterBy.includes('Tous les champs') && <td>{lic.duree}</td>}
               <td className="actions">
                 <button
                   className="btn-icon edit"

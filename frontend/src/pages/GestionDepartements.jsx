@@ -3,6 +3,7 @@ import axios from 'axios';
 import DepartementForm from '../components/DepartementForm';
 import DepartementTable from '../components/DepartementTable';
 import ChefProfileModal from '../components/ChefProfileModal';
+import MultiSelectDropdown from "../components/MultiSelectDropdown";
 import { parseFile } from "../utils/fileParser";
 import './GestionEtudiants.css';
 
@@ -10,7 +11,7 @@ const GestionDepartements = ({ role }) => {
   const [departements, setDepartements] = useState([]);
   const [filteredDepartements, setFilteredDepartements] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterBy, setFilterBy] = useState('Nom');
+  const [filterBy, setFilterBy] = useState(['Tous les champs']);
   const [showForm, setShowForm] = useState(false);
   const [selectedDepartement, setSelectedDepartement] = useState(null);
   const [message, setMessage] = useState('');
@@ -45,17 +46,28 @@ const GestionDepartements = ({ role }) => {
 
     if (searchTerm) {
       filtered = filtered.filter(dept => {
-        switch (filterBy) {
-          case 'Nom':
-            return dept.nom.toLowerCase().includes(searchTerm.toLowerCase());
-          case 'Code':
-            return dept.code.toLowerCase().includes(searchTerm.toLowerCase());
-          case 'Responsable':
-            return (dept.responsable || '').toLowerCase().includes(searchTerm.toLowerCase());
-          case 'Email':
-            return (dept.email || '').toLowerCase().includes(searchTerm.toLowerCase());
-          default:
-            return dept.nom.toLowerCase().includes(searchTerm.toLowerCase());
+        if (filterBy.includes('Tous les champs')) {
+          return (
+            dept.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            dept.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (dept.responsable || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (dept.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        } else {
+          return filterBy.some(field => {
+            switch (field) {
+              case 'Nom':
+                return dept.nom.toLowerCase().includes(searchTerm.toLowerCase());
+              case 'Code':
+                return dept.code.toLowerCase().includes(searchTerm.toLowerCase());
+              case 'Responsable':
+                return (dept.responsable || '').toLowerCase().includes(searchTerm.toLowerCase());
+              case 'Email':
+                return (dept.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+              default:
+                return false;
+            }
+          });
         }
       });
     }
@@ -175,19 +187,25 @@ const GestionDepartements = ({ role }) => {
       />
 
       <div className="controls-section">
-        <div className="search-area">
-          <div className="filter-group">
-            <label>Filtrer par:</label>
-            <select value={filterBy} onChange={(e) => setFilterBy(e.target.value)}>
-              <option value="Nom">Nom</option>
-              <option value="Code">Code</option>
-              <option value="Responsable">Responsable</option>
-              <option value="Email">Email</option>
-            </select>
+        <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+            <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
+            <MultiSelectDropdown
+              label="Tous les champs sélectionnés"
+              options={[
+                "Tous les champs",
+                "Nom",
+                "Code",
+                "Responsable",
+                "Email"
+              ]}
+              selected={filterBy}
+              onChange={setFilterBy}
+            />
           </div>
           <input
             type="text"
-            placeholder={`Rechercher par ${filterBy.toLowerCase()}`}
+            placeholder="Rechercher..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
@@ -211,12 +229,14 @@ const GestionDepartements = ({ role }) => {
       </div>
 
       {showForm && (
-        <div className="form-container">
-          <DepartementForm
-            onSubmit={handleAdd}
-            selectedDepartement={selectedDepartement}
-            onCancel={handleCancel}
-          />
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <DepartementForm
+              onSubmit={handleAdd}
+              selectedDepartement={selectedDepartement}
+              onCancel={handleCancel}
+            />
+          </div>
         </div>
       )}
 
@@ -226,6 +246,7 @@ const GestionDepartements = ({ role }) => {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onViewProfile={(dept) => setViewProfileId(dept.id)}
+          filterBy={filterBy}
         />
       </div>
 

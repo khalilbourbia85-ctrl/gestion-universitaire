@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import LicenceForm from '../components/LicenceForm';
 import LicenceTable from '../components/LicenceTable';
+import MultiSelectDropdown from "../components/MultiSelectDropdown";
 import { parseFile } from "../utils/fileParser";
 import './GestionEtudiants.css';
 
@@ -10,7 +11,7 @@ const GestionLicences = () => {
   const [filteredLicences, setFilteredLicences] = useState([]);
   const [departements, setDepartements] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterBy, setFilterBy] = useState('Nom');
+  const [filterBy, setFilterBy] = useState(['Tous les champs']);
   const [showForm, setShowForm] = useState(false);
   const [selectedLicence, setSelectedLicence] = useState(null);
   const [message, setMessage] = useState('');
@@ -49,17 +50,28 @@ const GestionLicences = () => {
 
     if (searchTerm) {
       filtered = filtered.filter(lic => {
-        switch (filterBy) {
-          case 'Mention':
-            return lic.nom.toLowerCase().includes(searchTerm.toLowerCase());
-          case 'Domaine':
-            return lic.domaine && lic.domaine.toLowerCase().includes(searchTerm.toLowerCase());
-          case 'Parcours':
-            return lic.parcours && lic.parcours.toLowerCase().includes(searchTerm.toLowerCase());
-          case 'Département':
-            return lic.departement_nom && lic.departement_nom.toLowerCase().includes(searchTerm.toLowerCase());
-          default:
-            return lic.nom.toLowerCase().includes(searchTerm.toLowerCase());
+        if (filterBy.includes('Tous les champs')) {
+          return (
+            lic.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (lic.domaine && lic.domaine.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (lic.parcours && lic.parcours.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (lic.departement_nom && lic.departement_nom.toLowerCase().includes(searchTerm.toLowerCase()))
+          );
+        } else {
+          return filterBy.some(field => {
+            switch (field) {
+              case 'Mention':
+                return lic.nom.toLowerCase().includes(searchTerm.toLowerCase());
+              case 'Domaine':
+                return lic.domaine && lic.domaine.toLowerCase().includes(searchTerm.toLowerCase());
+              case 'Parcours':
+                return lic.parcours && lic.parcours.toLowerCase().includes(searchTerm.toLowerCase());
+              case 'Département':
+                return lic.departement_nom && lic.departement_nom.toLowerCase().includes(searchTerm.toLowerCase());
+              default:
+                return false;
+            }
+          });
         }
       });
     }
@@ -180,19 +192,25 @@ const GestionLicences = () => {
       <h2>Gestion des Licences</h2>
 
       <div className="controls-section">
-        <div className="search-area">
-          <div className="filter-group">
-            <label>Filtrer par:</label>
-            <select value={filterBy} onChange={(e) => setFilterBy(e.target.value)}>
-              <option value="Mention">Mention</option>
-              <option value="Domaine">Domaine</option>
-              <option value="Parcours">Parcours</option>
-              <option value="Département">Département</option>
-            </select>
+        <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+            <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
+            <MultiSelectDropdown
+              label="Tous les champs sélectionnés"
+              options={[
+                "Tous les champs",
+                "Mention",
+                "Domaine",
+                "Parcours",
+                "Département"
+              ]}
+              selected={filterBy}
+              onChange={setFilterBy}
+            />
           </div>
           <input
             type="text"
-            placeholder={`Rechercher par ${filterBy.toLowerCase()}`}
+            placeholder="Rechercher..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
@@ -224,13 +242,15 @@ const GestionLicences = () => {
       {error && <div className="error-message">{error}</div>}
 
       {showForm && (
-        <div className="form-container">
-          <LicenceForm
-            onSubmit={handleAdd}
-            selectedLicence={selectedLicence}
-            onCancel={handleCancel}
-            departements={departements}
-          />
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <LicenceForm
+              onSubmit={handleAdd}
+              selectedLicence={selectedLicence}
+              onCancel={handleCancel}
+              departements={departements}
+            />
+          </div>
         </div>
       )}
 
@@ -239,6 +259,7 @@ const GestionLicences = () => {
           licences={filteredLicences}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          filterBy={filterBy}
         />
       </div>
     </div>

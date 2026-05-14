@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import ModuleForm from '../components/ModuleForm';
 import ModuleTable from '../components/ModuleTable';
+import MultiSelectDropdown from "../components/MultiSelectDropdown";
 import { parseFile } from "../utils/fileParser";
 import './GestionEtudiants.css';
 
@@ -11,7 +12,7 @@ const GestionModules = () => {
   const [licences, setLicences] = useState([]);
   const [specialites, setSpecialites] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterBy, setFilterBy] = useState('Nom');
+  const [filterBy, setFilterBy] = useState(['Tous les champs']);
   const [selectedLicence, setSelectedLicence] = useState(null);
   const [selectedSpecialite, setSelectedSpecialite] = useState(null);
   const [selectedAnnee, setSelectedAnnee] = useState(null);
@@ -78,21 +79,34 @@ const GestionModules = () => {
 
     if (searchTerm) {
       filtered = filtered.filter(mod => {
-        switch (filterBy) {
-          case 'Nom':
-            return mod.nom.toLowerCase().includes(searchTerm.toLowerCase());
-          case 'Spécialité':
-            return mod.specialite_nom?.toLowerCase().includes(searchTerm.toLowerCase());
-          case 'Licence':
-            return mod.licence_nom?.toLowerCase().includes(searchTerm.toLowerCase()) || mod.licence?.toString() === selectedLicence;
-          case 'Département':
-            return mod.departement_nom?.toLowerCase().includes(searchTerm.toLowerCase());
-          case 'Année':
-            return mod.annee.toLowerCase().includes(searchTerm.toLowerCase());
-          case 'Semestre':
-            return mod.semestre.toLowerCase().includes(searchTerm.toLowerCase());
-          default:
-            return mod.nom.toLowerCase().includes(searchTerm.toLowerCase());
+        if (filterBy.includes('Tous les champs')) {
+          return (
+            mod.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (mod.specialite_nom?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (mod.licence_nom?.toLowerCase().includes(searchTerm.toLowerCase()) || mod.licence?.toString() === selectedLicence) ||
+            (mod.departement_nom?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (mod.annee.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (mod.semestre.toLowerCase().includes(searchTerm.toLowerCase()))
+          );
+        } else {
+          return filterBy.some(field => {
+            switch (field) {
+              case 'Nom':
+                return mod.nom.toLowerCase().includes(searchTerm.toLowerCase());
+              case 'Spécialité':
+                return mod.specialite_nom?.toLowerCase().includes(searchTerm.toLowerCase());
+              case 'Licence':
+                return mod.licence_nom?.toLowerCase().includes(searchTerm.toLowerCase()) || mod.licence?.toString() === selectedLicence;
+              case 'Département':
+                return mod.departement_nom?.toLowerCase().includes(searchTerm.toLowerCase());
+              case 'Année':
+                return mod.annee.toLowerCase().includes(searchTerm.toLowerCase());
+              case 'Semestre':
+                return mod.semestre.toLowerCase().includes(searchTerm.toLowerCase());
+              default:
+                return false;
+            }
+          });
         }
       });
     }
@@ -322,24 +336,32 @@ const GestionModules = () => {
             </select>
           </div>
 
-          <div className="filter-group">
-            <label>Filtrer par:</label>
-            <select value={filterBy} onChange={(e) => setFilterBy(e.target.value)}>
-              <option value="Nom">Nom</option>
-              <option value="Spécialité">Spécialité</option>
-              <option value="Licence">Licence</option>
-              <option value="Département">Département</option>
-              <option value="Année">Année</option>
-              <option value="Semestre">Semestre</option>
-            </select>
+          <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+              <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
+              <MultiSelectDropdown
+                label="Tous les champs sélectionnés"
+                options={[
+                  "Tous les champs",
+                  "Nom",
+                  "Spécialité",
+                  "Licence",
+                  "Département",
+                  "Année",
+                  "Semestre"
+                ]}
+                selected={filterBy}
+                onChange={setFilterBy}
+              />
+            </div>
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
           </div>
-          <input
-            type="text"
-            placeholder={`Rechercher par ${filterBy.toLowerCase()}`}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
         </div>
 
         <button
@@ -367,13 +389,15 @@ const GestionModules = () => {
       {error && <div className="error-message">{error}</div>}
 
       {showForm && (
-        <div className="form-container">
-          <ModuleForm
-            onSubmit={handleAdd}
-            selectedModule={selectedModule}
-            onCancel={handleCancel}
-            specialites={specialites}
-          />
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <ModuleForm
+              onSubmit={handleAdd}
+              selectedModule={selectedModule}
+              onCancel={handleCancel}
+              specialites={specialites}
+            />
+          </div>
         </div>
       )}
 
@@ -388,6 +412,7 @@ const GestionModules = () => {
                     modules={semModules}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
+                    filterBy={filterBy}
                   />
                 </div>
               );

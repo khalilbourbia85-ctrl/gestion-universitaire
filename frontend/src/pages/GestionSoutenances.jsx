@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import SoutenancesTable from '../components/SoutenancesTable';
 import SoutenanceForm from '../components/SoutenanceForm';
+import MultiSelectDropdown from "../components/MultiSelectDropdown";
 import { parseFile } from "../utils/fileParser";
 import './GestionSoutenances.css';
 
@@ -13,7 +14,7 @@ function GestionSoutenances() {
   const [selectedSoutenance, setSelectedSoutenance] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterBy, setFilterBy] = useState('Tous les champs');
+  const [filterBy, setFilterBy] = useState(['Tous les champs']);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -49,27 +50,9 @@ function GestionSoutenances() {
   const filteredSoutenances = soutenances.filter((s) => {
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
-    switch (filterBy) {
-      case "ID Soutenance":
-        return String(s?.idSoutenance || '').toLowerCase().includes(term);
-      case "Date":
-        return String(s?.date_soutenance || '').toLowerCase().includes(term);
-      case "Heure":
-        return String(s?.heure_soutenance || '').toLowerCase().includes(term);
-      case "Salle":
-        return String(s?.salle || '').toLowerCase().includes(term);
-      case "Encadrant":
-        return String(s?.encadrant_detail?.nom || '').toLowerCase().includes(term) ||
-          String(s?.encadrant_detail?.prenom || '').toLowerCase().includes(term);
-      case "Type contrat (enc.)":
-        return String(s?.encadrant_detail?.typeContrat || '').toLowerCase().includes(term);
-      case "Rapporteur":
-        return String(s?.rapporteur_detail?.nom || '').toLowerCase().includes(term) ||
-          String(s?.rapporteur_detail?.prenom || '').toLowerCase().includes(term);
-      case "Type contrat (rap.)":
-        return String(s?.rapporteur_detail?.typeContrat || '').toLowerCase().includes(term);
-      default:
-        return (
+    
+    if (filterBy.includes("Tous les champs")) {
+      return (
           String(s?.idSoutenance || '').toLowerCase().includes(term) ||
           String(s?.date_soutenance || '').toLowerCase().includes(term) ||
           String(s?.heure_soutenance || '').toLowerCase().includes(term) ||
@@ -80,7 +63,32 @@ function GestionSoutenances() {
           String(s?.rapporteur_detail?.nom || '').toLowerCase().includes(term) ||
           String(s?.rapporteur_detail?.prenom || '').toLowerCase().includes(term) ||
           String(s?.rapporteur_detail?.typeContrat || '').toLowerCase().includes(term)
-        );
+      );
+    } else {
+      return filterBy.some(field => {
+        switch (field) {
+          case "ID Soutenance":
+            return String(s?.idSoutenance || '').toLowerCase().includes(term);
+          case "Date":
+            return String(s?.date_soutenance || '').toLowerCase().includes(term);
+          case "Heure":
+            return String(s?.heure_soutenance || '').toLowerCase().includes(term);
+          case "Salle":
+            return String(s?.salle || '').toLowerCase().includes(term);
+          case "Encadrant":
+            return String(s?.encadrant_detail?.nom || '').toLowerCase().includes(term) ||
+              String(s?.encadrant_detail?.prenom || '').toLowerCase().includes(term);
+          case "Type contrat (enc.)":
+            return String(s?.encadrant_detail?.typeContrat || '').toLowerCase().includes(term);
+          case "Rapporteur":
+            return String(s?.rapporteur_detail?.nom || '').toLowerCase().includes(term) ||
+              String(s?.rapporteur_detail?.prenom || '').toLowerCase().includes(term);
+          case "Type contrat (rap.)":
+            return String(s?.rapporteur_detail?.typeContrat || '').toLowerCase().includes(term);
+          default:
+            return false;
+        }
+      });
     }
   });
 
@@ -204,22 +212,26 @@ function GestionSoutenances() {
       ) : (
         <>
           <div className="page-container">
-            <div className="search-area">
-              <select
-                className="filter-select"
-                value={filterBy}
-                onChange={(e) => setFilterBy(e.target.value)}
-              >
-                <option>Tous les champs</option>
-                <option>ID Soutenance</option>
-                <option>Date</option>
-                <option>Heure</option>
-                <option>Salle</option>
-                <option>Encadrant</option>
-                <option>Type contrat (enc.)</option>
-                <option>Rapporteur</option>
-                <option>Type contrat (rap.)</option>
-              </select>
+            <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
+                <MultiSelectDropdown
+                  label="Tous les champs sélectionnés"
+                  options={[
+                    "Tous les champs",
+                    "ID Soutenance",
+                    "Date",
+                    "Heure",
+                    "Salle",
+                    "Encadrant",
+                    "Type contrat (enc.)",
+                    "Rapporteur",
+                    "Type contrat (rap.)"
+                  ]}
+                  selected={filterBy}
+                  onChange={setFilterBy}
+                />
+              </div>
 
               <input
                 type="text"
@@ -258,6 +270,7 @@ function GestionSoutenances() {
             soutenances={filteredSoutenances}
             onEdit={handleOpenForm}
             onDelete={handleDeleteSoutenance}
+            filterBy={filterBy}
           />
         </>
       )}

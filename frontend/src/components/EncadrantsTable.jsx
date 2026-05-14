@@ -1,20 +1,21 @@
 import React from 'react';
 import './Table.css';
 
-function EncadrantsTable({ enseignants, onEdit, onDelete, encadrantAuPlafondPfe }) {
+function EncadrantsTable({ enseignants, onEdit, onDelete, encadrantAuPlafondPfe, filterBy = ['Tous les champs'] }) {
   const safeEnseignants = Array.isArray(enseignants) ? enseignants : [];
+  const showField = (field) => Array.isArray(filterBy) ? (filterBy.includes('Tous les champs') || filterBy.includes(field)) : (filterBy === 'Tous les champs' || filterBy === field);
 
   return (
     <table className="table">
       <thead>
         <tr>
           <th>Matricule</th>
-          <th>Nom</th>
-          <th>Prénom</th>
-          <th>Email</th>
-          <th>Téléphone</th>
-          <th>Grade</th>
-          <th>Type contrat</th>
+          {showField('Nom') && <th>Nom</th>}
+          {showField('Prénom') && <th>Prénom</th>}
+          {showField('Email') && <th>Email</th>}
+          {filterBy.includes('Tous les champs') && <th>Téléphone</th>}
+          {showField('Grade') && <th>Grade</th>}
+          {showField('Type contrat') && <th>Type contrat</th>}
           <th>Actions</th>
         </tr>
       </thead>
@@ -41,19 +42,19 @@ function EncadrantsTable({ enseignants, onEdit, onDelete, encadrantAuPlafondPfe 
               }
             >
               <td>{enseignant.matricule}</td>
-              <td>{enseignant.nom}</td>
-              <td>{enseignant.prenom}</td>
-              <td>{enseignant.email}</td>
-              <td>{enseignant.numtel || ''}</td>
-              <td>{enseignant.grade}</td>
-              <td>{enseignant.typeContrat || '—'}</td>
+              {showField('Nom') && <td>{enseignant.nom}</td>}
+              {showField('Prénom') && <td>{enseignant.prenom}</td>}
+              {showField('Email') && <td>{enseignant.email}</td>}
+              {filterBy.includes('Tous les champs') && <td>{enseignant.numtel || ''}</td>}
+              {showField('Grade') && <td>{enseignant.grade}</td>}
+              {showField('Type contrat') && <td>{enseignant.typeContrat || '—'}</td>}
               <td>
-                <button className="action-button edit-icon" type="button" onClick={() => onEdit(enseignant)}>
-                  Modifier
-                </button>
-                <button className="action-button delete-icon" type="button" onClick={() => onDelete(enseignant.matricule)}>
-                  Supprimer
-                </button>
+                <span className="icon edit-icon" onClick={() => onEdit(enseignant)}>
+                  ✏️
+                </span>
+                <span className="icon delete-icon" onClick={() => onDelete(enseignant.matricule)}>
+                  🗑️
+                </span>
               </td>
             </tr>
             );

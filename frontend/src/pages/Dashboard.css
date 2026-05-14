@@ -57,6 +57,7 @@
 .kpi-card.encadrants .kpi-icon { color: #8b5cf6; background-color: #f5f3ff; }
 .kpi-card.rapporteurs .kpi-icon { color: #14b8a6; background-color: #ccfbf1; }
 .kpi-card.soutenances .kpi-icon { color: #f59e0b; background-color: #fffbeb; }
+.kpi-card.classes .kpi-icon { color: #6366f1; background-color: #e0e7ff; }
 
 
 .kpi-content h3 {

@@ -10,7 +10,7 @@ function PFEsTable({
   encadrantGroupCount,
   getEncadrantMaxGroupes,
   disableActions = false,
-  filterBy = 'Tous les champs',
+  filterBy = ['Tous les champs'],
 }) {
   const safePFEs = Array.isArray(pfes) ? pfes : [];
 
@@ -63,10 +63,10 @@ function PFEsTable({
         <tr>
           <th style={{ width: '60px' }}>ID PFE</th>
           {showField('Sujet') && <th style={{ width: '25%' }}>Sujet</th>}
-          {filterBy === 'Tous les champs' && <th style={{ width: '100px' }}>Durée (en mois)</th>}
+          {filterBy.includes('Tous les champs') && <th style={{ width: '100px' }}>Durée (en mois)</th>}
           {showField('Lieu de stage') && <th style={{ width: '15%' }}>Lieu de stage</th>}
           {showField('Spécialité') && <th style={{ width: '15%' }}>Spécialité</th>}
-          {filterBy === 'Tous les champs' && <th style={{ width: '25%' }}>Étudiants</th>}
+          {filterBy.includes('Tous les champs') && <th style={{ width: '25%' }}>Étudiants</th>}
           {showField('Encadrant') && <th style={{ width: '15%' }}>Encadrant</th>}
           {showField('Type contrat enc.') && <th style={{ width: '12%' }}>Type contrat (enc.)</th>}
           <th style={{ width: '150px' }}>Actions</th>
@@ -77,21 +77,21 @@ function PFEsTable({
           <tr key={pfe?.idPfe ?? `pfe-${index}`}>
             <td>{pfe?.idPfe ?? '-'}</td>
             {showField('Sujet') && <td>{pfe?.sujet ?? '-'}</td>}
-            {filterBy === 'Tous les champs' && <td>{pfe?.duree ? `${pfe.duree} mois` : '-'}</td>}
+            {filterBy.includes('Tous les champs') && <td>{pfe?.duree ? `${pfe.duree} mois` : '-'}</td>}
             {showField('Lieu de stage') && <td>{pfe?.lieu_stage ?? '-'}</td>}
             {showField('Spécialité') && <td>{pfe?.specialite ?? '-'}</td>}
-            {filterBy === 'Tous les champs' && <td>{renderStudents(pfe)}</td>}
+            {filterBy.includes('Tous les champs') && <td>{renderStudents(pfe)}</td>}
             {showField('Encadrant') && <td>{pfe?.encadrant_detail ? `${pfe.encadrant_detail.nom} ${pfe.encadrant_detail.prenom}` : '-'}</td>}
             {showField('Type contrat enc.') && <td>{pfe?.encadrant_detail?.typeContrat || '—'}</td>}
             <td>
               {!disableActions ? (
                 <>
-                  <button className="action-button edit-icon" type="button" onClick={() => onEdit(pfe)}>
-                    Modifier
-                  </button>
-                  <button className="action-button delete-icon" type="button" onClick={() => onDelete(pfe.idPfe)}>
-                    Supprimer
-                  </button>
+                  <span className="icon edit-icon" onClick={() => onEdit(pfe)}>
+                    ✏️
+                  </span>
+                  <span className="icon delete-icon" onClick={() => onDelete(pfe.idPfe)}>
+                    🗑️
+                  </span>
                   {onRandomAssign && (
                     <button 
                       className="action-button" 

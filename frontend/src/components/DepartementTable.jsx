@@ -2,17 +2,19 @@ import React from 'react';
 import './Table.css';
 import { FaEdit, FaTrash, FaUserCircle } from 'react-icons/fa';
 
-const DepartementTable = ({ departements, onEdit, onDelete, onViewProfile }) => {
+const DepartementTable = ({ departements, onEdit, onDelete, onViewProfile, filterBy = ['Tous les champs'] }) => {
+  const showField = (field) => Array.isArray(filterBy) ? (filterBy.includes('Tous les champs') || filterBy.includes(field)) : (filterBy === 'Tous les champs' || filterBy === field);
+
   return (
     <table className="table">
       <thead>
         <tr>
           <th>ID</th>
-          <th>Nom</th>
-          <th>Code</th>
-          <th>Responsable</th>
-          <th>Email</th>
-          <th>Téléphone</th>
+          {showField('Nom') && <th>Nom</th>}
+          {showField('Code') && <th>Code</th>}
+          {showField('Responsable') && <th>Responsable</th>}
+          {showField('Email') && <th>Email</th>}
+          {filterBy.includes('Tous les champs') && <th>Téléphone</th>}
           <th>Actions</th>
         </tr>
       </thead>
@@ -21,9 +23,9 @@ const DepartementTable = ({ departements, onEdit, onDelete, onViewProfile }) => 
           departements.map(dept => (
             <tr key={dept.id}>
               <td>{dept.id}</td>
-              <td>{dept.nom}</td>
-              <td>{dept.code}</td>
-              <td>
+              {showField('Nom') && <td>{dept.nom}</td>}
+              {showField('Code') && <td>{dept.code}</td>}
+              {showField('Responsable') && <td>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {dept.photo ? (
                     <img 
@@ -43,9 +45,9 @@ const DepartementTable = ({ departements, onEdit, onDelete, onViewProfile }) => 
                   )}
                   {dept.responsable || '-'}
                 </div>
-              </td>
-              <td>{dept.email || '-'}</td>
-              <td>{dept.telephone || '-'}</td>
+              </td>}
+              {showField('Email') && <td>{dept.email || '-'}</td>}
+              {filterBy.includes('Tous les champs') && <td>{dept.telephone || '-'}</td>}
               <td className="actions">
                 <button
                   className="btn-icon edit"

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import SpecialiteForm from '../components/SpecialiteForm';
+import SpecialiteTable from '../components/SpecialiteTable';
+import MultiSelectDropdown from "../components/MultiSelectDropdown";
 import './GestionEtudiants.css';
 
 const GestionSpecialites = () => {
@@ -7,7 +10,7 @@ const GestionSpecialites = () => {
   const [filteredSpecialites, setFilteredSpecialites] = useState([]);
   const [licences, setLicences] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterBy, setFilterBy] = useState('Nom');
+  const [filterBy, setFilterBy] = useState(['Tous les champs']);
   const [showForm, setShowForm] = useState(false);
   const [selectedSpecialite, setSelectedSpecialite] = useState(null);
   const [message, setMessage] = useState('');
@@ -38,6 +41,44 @@ const GestionSpecialites = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLicences();
   }, []);
+
+  const applyFilters = () => {
+    let filtered = specialites;
+
+    if (searchTerm) {
+      filtered = filtered.filter(spec => {
+        if (filterBy.includes('Tous les champs')) {
+          return (
+            spec.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            spec.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (spec.licence_nom || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (spec.departement_nom || '').toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        } else {
+          return filterBy.some(field => {
+            switch (field) {
+              case 'Nom':
+                return spec.nom.toLowerCase().includes(searchTerm.toLowerCase());
+              case 'Code':
+                return spec.code.toLowerCase().includes(searchTerm.toLowerCase());
+              case 'Licence':
+                return (spec.licence_nom || '').toLowerCase().includes(searchTerm.toLowerCase());
+              case 'Département':
+                return (spec.departement_nom || '').toLowerCase().includes(searchTerm.toLowerCase());
+              default:
+                return false;
+            }
+          });
+        }
+      });
+    }
+
+    setFilteredSpecialites(filtered);
+  };
+
+  useEffect(() => {
+    applyFilters();
+  }, [specialites, searchTerm, filterBy]);
 
   const handleAdd = async (formData) => {
     try {
@@ -90,19 +131,25 @@ const GestionSpecialites = () => {
       <h2>Gestion des Spécialités</h2>
 
       <div className="controls-section">
-        <div className="search-area">
-          <div className="filter-group">
-            <label>Filtrer par:</label>
-            <select value={filterBy} onChange={(e) => setFilterBy(e.target.value)}>
-              <option value="Nom">Nom</option>
-              <option value="Code">Code</option>
-              <option value="Licence">Licence</option>
-              <option value="Département">Département</option>
-            </select>
+        <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+            <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
+            <MultiSelectDropdown
+              label="Tous les champs sélectionnés"
+              options={[
+                "Tous les champs",
+                "Nom",
+                "Code",
+                "Licence",
+                "Département"
+              ]}
+              selected={filterBy}
+              onChange={setFilterBy}
+            />
           </div>
           <input
             type="text"
-            placeholder={`Rechercher par ${filterBy.toLowerCase()}`}
+            placeholder="Rechercher..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
@@ -124,13 +171,15 @@ const GestionSpecialites = () => {
       {error && <div className="error-message">{error}</div>}
 
       {showForm && (
-        <div className="form-container">
-          <SpecialiteForm
-            onSubmit={handleAdd}
-            selectedSpecialite={selectedSpecialite}
-            onCancel={handleCancel}
-            licences={licences}
-          />
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <SpecialiteForm
+              onSubmit={handleAdd}
+              selectedSpecialite={selectedSpecialite}
+              onCancel={handleCancel}
+              licences={licences}
+            />
+          </div>
         </div>
       )}
 
@@ -139,6 +188,7 @@ const GestionSpecialites = () => {
           specialites={filteredSpecialites}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          filterBy={filterBy}
         />
       </div>
     </div>

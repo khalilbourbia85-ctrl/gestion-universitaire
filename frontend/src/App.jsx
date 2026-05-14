@@ -16,6 +16,7 @@ import GestionSoutenances from "./pages/GestionSoutenances";
 import GestionDepartements from "./pages/GestionDepartements";
 import GestionLicences from "./pages/GestionLicences";
 import GestionModules from "./pages/GestionModules";
+import ChatAssistant from "./components/ChatAssistant";
 
 function App() {
   const [token, setToken] = useState(null);
@@ -63,7 +64,7 @@ return (
 <Route path="/modules" element={<GestionModules />} />
 
 </Routes>
-
+<ChatAssistant />
 </Layout>
 
 );

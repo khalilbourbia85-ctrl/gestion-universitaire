@@ -1,5 +1,5 @@
 import React,{useState,useEffect} from "react";
-import "./EnseignantForm.css";
+import "./EtudiantForm.css";
 
 function EnseignantForm({ selected, onSubmit, onCancel, onFormChange }) {
   const initialFormState = {
@@ -165,197 +165,174 @@ const validateForm = () => {
     }
   };
 
-return(
+  return (
+<form className="form-container" onSubmit={handleSubmit}>
+  <h2 className="form-title">
+    {selected ? "Modifier Enseignant" : "Nouvel Enseignant"}
+  </h2>
 
-<div className="modal">
+  {formError && <div className="success-message" style={{ background: '#e53e3e', marginBottom: '15px' }}>{formError}</div>}
 
-<form className="form" onSubmit={handleSubmit}>
+  <div className="form-grid">
+    <div className="input-group">
+      <label>Matricule</label>
+      <input name="matricule" placeholder="-" value={form.matricule} onChange={handleChange} disabled={!!selected}/>
+    </div>
+    <div className="input-group">
+      <label>CIN</label>
+      <input name="cin" placeholder="-" value={form.cin} onChange={handleChange}/>
+    </div>
+    <div className="input-group">
+      <label>Nom</label>
+      <input name="nom" placeholder="-" value={form.nom} onChange={handleChange}/>
+    </div>
+    <div className="input-group">
+      <label>Prénom</label>
+      <input name="prenom" placeholder="-" value={form.prenom} onChange={handleChange}/>
+    </div>
+    <div className="input-group">
+      <label>Email</label>
+      <input name="email" placeholder="-" value={form.email} onChange={handleChange}/>
+    </div>
+    <div className="input-group">
+      <label>Téléphone</label>
+      <input name="numTel" placeholder="-" value={form.numTel} onChange={handleChange}/>
+    </div>
+    <div className="input-group">
+      <label>Grade</label>
+      <input name="grade" placeholder="-" value={form.grade} onChange={handleChange}/>
+    </div>
+    <div className="input-group">
+      <label>Date de recrutement</label>
+      <input type="date" name="dateRecrutement" value={form.dateRecrutement} onChange={handleChange}/>
+    </div>
+    <div className="input-group">
+      <label>Statut Administratif</label>
+      <select name="statutAdministratif" value={form.statutAdministratif} onChange={handleChange}>
+        <option value="">Choisir</option>
+        <option value="en exercice">En exercice</option>
+        <option value="en détachement">En détachement</option>
+        <option value="en congé étude">En congé étude</option>
+      </select>
+    </div>
+    <div className="input-group">
+      <label>Type contrat</label>
+      <select name="typeContrat" value={form.typeContrat} onChange={handleChange}>
+        <option value="">Choisir</option>
+        <option value="Permanent">Permanent</option>
+        <option value="Vacataire">Vacataire</option>
+        <option value="ContratDoctorant">Contrat Doctorant</option>
+        <option value="ContratDocteur">Contrat Docteur</option>
+      </select>
+    </div>
 
-<h3>Formulaire Enseignant</h3>
+    {form.typeContrat === "Permanent" && (
+      <>
+        <div className="input-group">
+          <label>Date titularisation</label>
+          <input type="date" name="dateTitularisation" value={form.dateTitularisation} onChange={handleChange} />
+        </div>
+        <div className="input-group">
+          <label>Année inscription</label>
+          <input name="anneeInscription" placeholder="-" value={form.anneeInscription} onChange={handleChange} />
+        </div>
+      </>
+    )}
 
-{formError && <div className="form-error">{formError}</div>}
+    {form.typeContrat === "Vacataire" && (
+      <>
+        <div className="input-group">
+          <label>Nb heures</label>
+          <input name="nbHeures" placeholder="-" value={form.nbHeures} onChange={handleChange} />
+        </div>
+        <div className="input-group">
+          <label>Taux horaire</label>
+          <input name="tauxHoraire" placeholder="-" value={form.tauxHoraire} onChange={handleChange} />
+        </div>
+      </>
+    )}
 
-<input name="matricule" placeholder="Matricule" value={form.matricule} onChange={handleChange} disabled={!!selected}/>
-<input name="cin" placeholder="CIN" value={form.cin} onChange={handleChange}/>
-<input name="nom" placeholder="Nom" value={form.nom} onChange={handleChange}/>
-<input name="prenom" placeholder="Prénom" value={form.prenom} onChange={handleChange}/>
-<input name="email" placeholder="Email" value={form.email} onChange={handleChange}/>
-<input name="numTel" placeholder="Téléphone" value={form.numTel} onChange={handleChange}/>
-<input name="grade" placeholder="Grade" value={form.grade} onChange={handleChange}/>
-<input type="date" name="dateRecrutement" value={form.dateRecrutement} onChange={handleChange}/>
+    {form.typeContrat === "ContratDoctorant" && (
+      <>
+        <div className="input-group">
+          <label>Durée contrat</label>
+          <input name="dureeContrat" placeholder="-" value={form.dureeContrat} onChange={handleChange} />
+        </div>
+        <div className="input-group">
+          <label>Date début</label>
+          <input type="date" name="dateDebut" value={form.dateDebut} onChange={handleChange} />
+        </div>
+        <div className="input-group">
+          <label>Date fin</label>
+          <input type="date" name="dateFin" value={form.dateFin} onChange={handleChange} />
+        </div>
+        <div className="input-group">
+          <label>Sujet thèse</label>
+          <input name="sujetThese" placeholder="-" value={form.sujetThese} onChange={handleChange} />
+        </div>
+        <div className="input-group">
+          <label>Université</label>
+          <input name="universite" placeholder="-" value={form.universite} onChange={handleChange} />
+        </div>
+        <div className="input-group">
+          <label>Année inscription</label>
+          <input name="anneeInscription" placeholder="-" value={form.anneeInscription} onChange={handleChange} />
+        </div>
+      </>
+    )}
 
-<label>Statut Administratif</label>
-<select name="statutAdministratif" value={form.statutAdministratif} onChange={handleChange}>
-  <option value="">Choisir</option>
-  <option value="en exercice">En exercice</option>
-  <option value="en détachement">En détachement</option>
-  <option value="en congé étude">En congé étude</option>
-</select>
+    {form.typeContrat === "ContratDocteur" && (
+      <>
+        <div className="input-group">
+          <label>Durée contrat</label>
+          <input name="dureeContrat" placeholder="-" value={form.dureeContrat} onChange={handleChange} />
+        </div>
+        <div className="input-group">
+          <label>Date début</label>
+          <input type="date" name="dateDebut" value={form.dateDebut} onChange={handleChange} />
+        </div>
+        <div className="input-group">
+          <label>Date fin</label>
+          <input type="date" name="dateFin" value={form.dateFin} onChange={handleChange} />
+        </div>
+        <div className="input-group">
+          <label>Prime recherche</label>
+          <input name="primeRecherche" placeholder="-" value={form.primeRecherche} onChange={handleChange} />
+        </div>
+        <div className="input-group">
+          <label>Numéro d'ordre</label>
+          <input name="numeroOrdre" placeholder="-" value={form.numeroOrdre} onChange={handleChange} />
+        </div>
+      </>
+    )}
+  </div>
 
-<label>Type contrat</label>
+  <h4 style={{marginTop: '20px', marginBottom: '10px', color: '#102445', width: '100%', borderBottom: '1px solid #e2e8f0', paddingBottom: '5px'}}>Diplôme</h4>
+  <div className="form-grid">
+    <div className="input-group">
+      <label>Libellé diplôme</label>
+      <input name="diplome.libelleDiplome" placeholder="-" value={form.diplome.libelleDiplome} onChange={handleChange} />
+    </div>
+    <div className="input-group">
+      <label>Spécialité</label>
+      <input name="diplome.specialite" placeholder="-" value={form.diplome.specialite} onChange={handleChange} />
+    </div>
+    <div className="input-group">
+      <label>Université</label>
+      <input name="diplome.universite" placeholder="-" value={form.diplome.universite} onChange={handleChange} />
+    </div>
+    <div className="input-group">
+      <label>Date obtention</label>
+      <input type="date" name="diplome.dateObtention" value={form.diplome.dateObtention} onChange={handleChange} />
+    </div>
+  </div>
 
-<select name="typeContrat" value={form.typeContrat} onChange={handleChange}>
-
-<option value="">Choisir</option>
-<option value="Permanent">Permanent</option>
-<option value="Vacataire">Vacataire</option>
-<option value="ContratDoctorant">Contrat Doctorant</option>
-<option value="ContratDocteur">Contrat Docteur</option>
-
-</select>
-
-{form.typeContrat === "Permanent" && (
-  <>
-    <input
-      type="date"
-      name="dateTitularisation"
-      placeholder="Date titularisation"
-      value={form.dateTitularisation}
-      onChange={handleChange}
-    />
-    <input
-      name="anneeInscription"
-      placeholder="Année inscription"
-      value={form.anneeInscription}
-      onChange={handleChange}
-    />
-  </>
-)}
-
-{form.typeContrat === "Vacataire" && (
-  <>
-    <input
-      name="nbHeures"
-      placeholder="Nb heures"
-      value={form.nbHeures}
-      onChange={handleChange}
-    />
-    <input
-      name="tauxHoraire"
-      placeholder="Taux horaire"
-      value={form.tauxHoraire}
-      onChange={handleChange}
-    />
-  </>
-)}
-
-{form.typeContrat === "ContratDoctorant" && (
-  <>
-    <input
-      name="dureeContrat"
-      placeholder="Durée contrat"
-      value={form.dureeContrat}
-      onChange={handleChange}
-    />
-    <input
-      type="date"
-      name="dateDebut"
-      value={form.dateDebut}
-      onChange={handleChange}
-    />
-    <input
-      type="date"
-      name="dateFin"
-      value={form.dateFin}
-      onChange={handleChange}
-    />
-    <input
-      name="sujetThese"
-      placeholder="Sujet thèse"
-      value={form.sujetThese}
-      onChange={handleChange}
-    />
-    <input
-      name="universite"
-      placeholder="Université"
-      value={form.universite}
-      onChange={handleChange}
-    />
-    <input
-      name="anneeInscription"
-      placeholder="Année inscription"
-      value={form.anneeInscription}
-      onChange={handleChange}
-    />
-  </>
-)}
-
-{form.typeContrat === "ContratDocteur" && (
-  <>
-    <input
-      name="dureeContrat"
-      placeholder="Durée contrat"
-      value={form.dureeContrat}
-      onChange={handleChange}
-    />
-    <input
-      type="date"
-      name="dateDebut"
-      value={form.dateDebut}
-      onChange={handleChange}
-    />
-    <input
-      type="date"
-      name="dateFin"
-      value={form.dateFin}
-      onChange={handleChange}
-    />
-    <input
-      name="primeRecherche"
-      placeholder="Prime recherche"
-      value={form.primeRecherche}
-      onChange={handleChange}
-    />
-    <input
-      name="numeroOrdre"
-      placeholder="Numéro d'ordre"
-      value={form.numeroOrdre}
-      onChange={handleChange}
-    />
-  </>
-)}
-
-<h4>Diplôme</h4>
-
-<input
-  name="diplome.libelleDiplome"
-  placeholder="Libellé diplôme"
-  value={form.diplome.libelleDiplome}
-  onChange={handleChange}
-/>
-<input
-  name="diplome.specialite"
-  placeholder="Spécialité"
-  value={form.diplome.specialite}
-  onChange={handleChange}
-/>
-<input
-  name="diplome.universite"
-  placeholder="Université"
-  value={form.diplome.universite}
-  onChange={handleChange}
-/>
-<input
-  type="date"
-  name="diplome.dateObtention"
-  value={form.diplome.dateObtention}
-  onChange={handleChange}
-/>
-
-<div className="buttons">
-
-<button type="submit">Valider</button>
-
-<button type="button" onClick={onCancel}>Annuler</button>
-
-</div>
-
+  <div className="form-buttons" style={{marginTop: '20px'}}>
+    <button type="submit" className="btn save-btn">Enregistrer</button>
+    <button type="button" className="btn cancel-btn" onClick={onCancel}>Annuler</button>
+  </div>
 </form>
-
-</div>
-
 );
-
 }
 
 export default EnseignantForm;

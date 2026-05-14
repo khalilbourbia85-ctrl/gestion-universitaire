@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
-import { FaUserGraduate, FaChalkboardTeacher, FaUniversity, FaBook, FaPencilAlt } from 'react-icons/fa';
+import { FaUserGraduate, FaChalkboardTeacher, FaUniversity, FaBook, FaPencilAlt, FaUsers } from 'react-icons/fa';
 import './Dashboard.css';
 
 const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#f59e0b'];
@@ -15,7 +15,8 @@ export default function Dashboard() {
     enseignants: 0,
     departements: 0,
     licences: 0,
-    modules: 0
+    modules: 0,
+    classes: 0
   });
 
   const [chartData, setChartData] = useState({
@@ -39,12 +40,20 @@ export default function Dashboard() {
         const etudiantsData = Array.isArray(etudiants.data) ? etudiants.data : [];
         const enseignantsData = Array.isArray(enseignants.data) ? enseignants.data : [];
 
+        const classesSet = new Set();
+        etudiantsData.forEach(e => {
+          if (e.groupe && e.groupe.trim() !== '') {
+            classesSet.add(e.groupe.trim().toLowerCase());
+          }
+        });
+
         setStats({
           etudiants: etudiantsData.length,
           enseignants: enseignantsData.length,
           departements: Array.isArray(departements.data) ? departements.data.length : 0,
           licences: Array.isArray(licences.data) ? licences.data.length : 0,
-          modules: Array.isArray(modules.data) ? modules.data.length : 0
+          modules: Array.isArray(modules.data) ? modules.data.length : 0,
+          classes: classesSet.size
         });
 
         // 1. Etudiants par Licence
@@ -130,6 +139,14 @@ export default function Dashboard() {
               <div className="kpi-content">
                 <h3>Modules</h3>
                 <p className="kpi-value">{stats.modules}</p>
+              </div>
+            </div>
+
+            <div className="kpi-card classes">
+              <div className="kpi-icon"><FaUsers /></div>
+              <div className="kpi-content">
+                <h3>Classes</h3>
+                <p className="kpi-value">{stats.classes}</p>
               </div>
             </div>
           </div>

@@ -44,20 +44,18 @@ return(
 {filterBy === 'Tous les champs' && <td>{e.diplome?.libelleDiplome}</td>}
 
 <td>
-  <button
-    type="button"
-    className="action-button edit-icon"
+  <span
+    className="icon edit-icon"
     onClick={() => onEdit(e)}
   >
     ✏️
-  </button>
-  <button
-    type="button"
-    className="action-button delete-icon"
+  </span>
+  <span
+    className="icon delete-icon"
     onClick={() => onDelete(e.matricule)}
   >
     🗑️
-  </button>
+  </span>
 </td>
 
 </tr>

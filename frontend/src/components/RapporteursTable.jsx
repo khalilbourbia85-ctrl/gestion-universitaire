@@ -1,22 +1,23 @@
 import React from 'react';
 import './Table.css';
 
-function RapporteursTable({ rapporteurs, onEdit, onDelete }) {
+function RapporteursTable({ rapporteurs, onEdit, onDelete, filterBy = ['Tous les champs'] }) {
   const safeRapporteurs = Array.isArray(rapporteurs) ? rapporteurs : [];
+  const showField = (field) => Array.isArray(filterBy) ? (filterBy.includes('Tous les champs') || filterBy.includes(field)) : (filterBy === 'Tous les champs' || filterBy === field);
 
   return (
     <table className="table">
       <thead>
         <tr>
           <th>Matricule</th>
-          <th>Nom</th>
-          <th>Prénom</th>
-          <th>Email</th>
-          <th>Téléphone</th>
-          <th>Grade</th>
-          <th>Type contrat</th>
-          <th style={{ whiteSpace: 'nowrap' }}>Groupes encadrés</th>
-          <th style={{ whiteSpace: 'nowrap' }}>Soutenances rapporteur</th>
+          {showField('Nom') && <th>Nom</th>}
+          {showField('Prénom') && <th>Prénom</th>}
+          {showField('Email') && <th>Email</th>}
+          {filterBy.includes('Tous les champs') && <th>Téléphone</th>}
+          {showField('Grade') && <th>Grade</th>}
+          {showField('Type contrat') && <th>Type contrat</th>}
+          {filterBy.includes('Tous les champs') && <th style={{ whiteSpace: 'nowrap' }}>Groupes encadrés</th>}
+          {filterBy.includes('Tous les champs') && <th style={{ whiteSpace: 'nowrap' }}>Soutenances rapporteur</th>}
           <th>Actions</th>
         </tr>
       </thead>
@@ -47,23 +48,23 @@ function RapporteursTable({ rapporteurs, onEdit, onDelete }) {
               }
             >
               <td>{rapporteur.matricule}</td>
-              <td>{rapporteur.nom}</td>
-              <td>{rapporteur.prenom}</td>
-              <td>{rapporteur.email}</td>
-              <td>{rapporteur.numtel || ''}</td>
-              <td>{rapporteur.grade}</td>
-              <td>{rapporteur.typeContrat || '—'}</td>
-              <td style={{ fontWeight: 600, textAlign: 'center' }}>{encOk}</td>
-              <td style={{ fontWeight: 600, textAlign: 'center' }}>{rapOk}</td>
+              {showField('Nom') && <td>{rapporteur.nom}</td>}
+              {showField('Prénom') && <td>{rapporteur.prenom}</td>}
+              {showField('Email') && <td>{rapporteur.email}</td>}
+              {filterBy.includes('Tous les champs') && <td>{rapporteur.numtel || ''}</td>}
+              {showField('Grade') && <td>{rapporteur.grade}</td>}
+              {showField('Type contrat') && <td>{rapporteur.typeContrat || '—'}</td>}
+              {filterBy.includes('Tous les champs') && <td style={{ fontWeight: 600, textAlign: 'center' }}>{encOk}</td>}
+              {filterBy.includes('Tous les champs') && <td style={{ fontWeight: 600, textAlign: 'center' }}>{rapOk}</td>}
               <td>
                 {!rapporteur.syncedFromEnseignant ? (
                   <>
-                    <button className="action-button edit-icon" type="button" onClick={() => onEdit(rapporteur)}>
-                      Modifier
-                    </button>
-                    <button className="action-button delete-icon" type="button" onClick={() => onDelete(rapporteur.matricule)}>
-                      Supprimer
-                    </button>
+                    <span className="icon edit-icon" onClick={() => onEdit(rapporteur)}>
+                      ✏️
+                    </span>
+                    <span className="icon delete-icon" onClick={() => onDelete(rapporteur.matricule)}>
+                      🗑️
+                    </span>
                   </>
                 ) : (
                   <span style={{ color: '#64748b', fontSize: '13px' }} title="Fiche enseignant : modifiez l’encadrant">
