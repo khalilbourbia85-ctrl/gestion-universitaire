@@ -18,6 +18,20 @@ function GestionEtudiants() {
   const [licences, setLicences] = useState([]);
   const [specialites, setSpecialites] = useState([]);
 
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const defaultYear = currentMonth >= 8 ? `${currentYear}/${currentYear + 1}` : `${currentYear - 1}/${currentYear}`;
+  const [anneeUniversitaire, setAnneeUniversitaire] = useState(defaultYear);
+
+  const yearOptions = [
+    "2022/2023",
+    "2023/2024",
+    "2024/2025",
+    "2025/2026",
+    "2026/2027",
+    "2027/2028",
+  ];
+
   const fileRef = useRef(null);
 
   /*
@@ -354,11 +368,30 @@ function GestionEtudiants() {
 
     <>
   
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
         <h2 className="page-title" style={{ marginBottom: '0' }}>Gestion des étudiants</h2>
-        <span style={{ fontSize: '16px', fontWeight: '500', color: '#64748b', letterSpacing: '0.5px' }}>
-          Année universitaire {new Date().getMonth() >= 8 ? `${new Date().getFullYear()} / ${new Date().getFullYear() + 1}` : `${new Date().getFullYear() - 1} / ${new Date().getFullYear()}`}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '16px', fontWeight: '500', color: '#64748b' }}>Année universitaire :</span>
+          <select 
+            value={anneeUniversitaire}
+            onChange={(e) => setAnneeUniversitaire(e.target.value)}
+            style={{ 
+              padding: '6px 12px', 
+              borderRadius: '6px', 
+              border: '1px solid #cbd5e1', 
+              fontSize: '15px', 
+              fontWeight: '600', 
+              color: '#334155',
+              backgroundColor: '#f8fafc',
+              cursor: 'pointer',
+              outline: 'none'
+            }}
+          >
+            {yearOptions.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </div>
       </div>
   
       {successMessage && (
