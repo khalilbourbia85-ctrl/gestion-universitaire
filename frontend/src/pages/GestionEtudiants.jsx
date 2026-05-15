@@ -354,7 +354,12 @@ function GestionEtudiants() {
 
     <>
   
-      <h2 className="page-title">Gestion des étudiants</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '20px' }}>
+        <h2 className="page-title" style={{ marginBottom: '0' }}>Gestion des étudiants</h2>
+        <span style={{ fontSize: '16px', fontWeight: '500', color: '#64748b', letterSpacing: '0.5px' }}>
+          Année universitaire {new Date().getMonth() >= 8 ? `${new Date().getFullYear()} / ${new Date().getFullYear() + 1}` : `${new Date().getFullYear() - 1} / ${new Date().getFullYear()}`}
+        </span>
+      </div>
   
       {successMessage && (
         <div className="success-message">
