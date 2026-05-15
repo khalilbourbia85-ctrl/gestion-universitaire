@@ -45,7 +45,9 @@ class AIChatView(APIView):
             soutenances_str = ""
             for s in soutenances_list:
                 pfe_sujet = s.pfe.sujet if s.pfe else 'Aucun PFE lié'
-                soutenances_str += f"- Salle: {s.salle}, Date: {s.date_soutenance}, Heure: {s.heure_soutenance}, Sujet: {pfe_sujet}, Encadrant: {s.encadrant}, Rapporteur: {s.rapporteur}\n"
+                s_type = getattr(s, 'get_type_soutenance_display', lambda: s.type_soutenance)() if hasattr(s, 'type_soutenance') else 'Finale'
+                duree_str = f"{s.duree} min" if s.duree else "Non spécifiée"
+                soutenances_str += f"- Type: {s_type}, Salle: {s.salle}, Date: {s.date_soutenance}, Heure: {s.heure_soutenance}, Durée: {duree_str}, Sujet: {pfe_sujet}, Encadrant: {s.encadrant}, Rapporteur: {s.rapporteur}\n"
             if not soutenances_str:
                 soutenances_str = "Aucune soutenance enregistrée."
                 
