@@ -104,7 +104,9 @@ class AIChatView(APIView):
             - Utilise la mise en forme Markdown (listes, gras).
             - **Ne te base QUE sur les données fournies ci-dessus.**
             - **N'invente JAMAIS d'étudiants, de soutenances ou de professeurs qui ne sont pas dans les listes ci-dessus.**
-            - Si l'information n'est pas dans le contexte, dis clairement que tu n'as pas accès à cette donnée ou qu'elle n'existe pas dans le système.
+            - Si l'utilisateur demande une "soutenance technique" ou "soutenance finale", regarde STRICTEMENT le champ "Type:". Si aucune soutenance de ce type n'existe dans la liste, tu DOIS dire qu'il n'y en a aucune.
+            - Si tu vois "Type: Finale", CE N'EST PAS une soutenance technique.
+            - Si l'information n'est pas dans le contexte ou qu'aucun enregistrement ne correspond, dis clairement que ça n'existe pas.
             """
 
             messages = [{"role": "system", "content": system_prompt}]
