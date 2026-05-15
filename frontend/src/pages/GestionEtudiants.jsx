@@ -71,13 +71,15 @@ function GestionEtudiants() {
     try {
       setError("");
 
+      const payload = { ...etudiant, annee_universitaire: anneeUniversitaire };
+
       if (selected) {
         // UPDATE MODE
-        await axios.put(`/api/etudiants/${selected.idEtudiant}/`, etudiant);
+        await axios.put(`/api/etudiants/${selected.idEtudiant}/`, payload);
         setSuccessMessage("Étudiant modifié avec succès");
       } else {
         // ADD MODE
-        await axios.post("/api/etudiants/", etudiant);
+        await axios.post("/api/etudiants/", payload);
         setSuccessMessage("Étudiant ajouté avec succès");
       }
 
@@ -153,6 +155,7 @@ function GestionEtudiants() {
         : null,
     situation_s5: item.situation_s5 && item.situation_s5.toUpperCase().startsWith('R') ? 'R' : 'N',
     situation_pfe: item.situation_pfe && item.situation_pfe.toUpperCase().startsWith('R') ? 'R' : 'N',
+    annee_universitaire: anneeUniversitaire,
   });
 
   const normalizeHeader = (header) =>
@@ -320,6 +323,9 @@ function GestionEtudiants() {
   */
 
   const filteredEtudiants = etudiants.filter((e) => {
+    // Only show students for the selected academic year
+    if (e.annee_universitaire && e.annee_universitaire !== anneeUniversitaire) return false;
+
     if (!searchTerm.trim()) return true;
 
     const term = searchTerm.toLowerCase();

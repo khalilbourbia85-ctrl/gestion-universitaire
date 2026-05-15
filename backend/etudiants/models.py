@@ -28,6 +28,7 @@ class Etudiant(models.Model):
         choices=SITUATION_CHOICES, 
         default='N'
     )
+    annee_universitaire = models.CharField(max_length=9, default='2025/2026')
     groupe = models.CharField(max_length=50, null=True, blank=True)
 
     licence = models.ForeignKey(
