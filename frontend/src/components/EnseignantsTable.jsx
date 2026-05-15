@@ -17,7 +17,8 @@ return(
   {showField('Nom') && <th>👤 Nom</th>}
   {showField('Prénom') && <th>🧑‍🎓 Prénom</th>}
   {showField('Email') && <th>📧 Email</th>}
-  {filterBy === 'Tous les champs' && <th>📱 Téléphone</th>}
+  {showField('Grade') && <th>🎖️ Grade</th>}
+  {showField('Téléphone') && <th>📱 Téléphone</th>}
   {filterBy === 'Tous les champs' && <th>📅 Date recrutement</th>}
   {filterBy === 'Tous les champs' && <th>📄 Type contrat</th>}
   {filterBy === 'Tous les champs' && <th>⚙️ Statut Administratif</th>}
@@ -37,7 +38,8 @@ return(
 {showField('Nom') && <td>{e.nom}</td>}
 {showField('Prénom') && <td>{e.prenom}</td>}
 {showField('Email') && <td>{e.email}</td>}
-{filterBy === 'Tous les champs' && <td>{e.numTel}</td>}
+{showField('Grade') && <td>{e.grade}</td>}
+{showField('Téléphone') && <td>{e.numTel}</td>}
 {filterBy === 'Tous les champs' && <td>{e.dateRecrutement}</td>}
 {filterBy === 'Tous les champs' && <td>{e.typeContrat}</td>}
 {filterBy === 'Tous les champs' && <td>{e.statutAdministratif}</td>}

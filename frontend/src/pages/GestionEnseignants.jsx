@@ -241,7 +241,8 @@ function GestionEnseignants() {
         searchInField(e.nom) ||
         searchInField(e.prenom) ||
         searchInField(e.email) ||
-        searchInField(e.grade)
+        searchInField(e.grade) ||
+        searchInField(e.numTel)
       );
     } else {
       return filterBy.some(field => {
@@ -252,6 +253,7 @@ function GestionEnseignants() {
           case "Prénom": return searchInField(e.prenom);
           case "Email": return searchInField(e.email);
           case "Grade": return searchInField(e.grade);
+          case "Téléphone": return searchInField(e.numTel);
           default: return false;
         }
       });
@@ -274,7 +276,7 @@ function GestionEnseignants() {
                 <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
                 <MultiSelectDropdown
                   label="Tous les champs sélectionnés"
-                  options={["Tous les champs", "Matricule", "CIN", "Nom", "Prénom", "Email", "Grade"]}
+                  options={["Tous les champs", "Matricule", "CIN", "Nom", "Prénom", "Email", "Téléphone", "Grade"]}
                   selected={filterBy}
                   onChange={setFilterBy}
                 />
