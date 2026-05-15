@@ -21,7 +21,8 @@ function EtudiantsTable({ etudiants, onEdit, onDelete, filterBy = ['Tous les cha
 {showField('Licence') && <th>🎓Licence</th>}
 {showField('Spécialité') && <th>📚Spécialité</th>}
 {showField('Groupe') && <th>👥Groupe</th>}
-{showField('Situation') && <th>📊Situation</th>}
+{showField('Situation Semestre 5') && <th>📊Situation Semestre 5</th>}
+{showField('Situation PFE') && <th>💼Situation PFE</th>}
 <th>⚙️Actions</th>
 </tr>
 
@@ -42,7 +43,8 @@ function EtudiantsTable({ etudiants, onEdit, onDelete, filterBy = ['Tous les cha
             {showField('Licence') && <td>{e.licence_detail ? `${e.licence_detail.nom} (${e.licence_detail.code})` : '—'}</td>}
             {showField('Spécialité') && <td>{e.specialite_detail ? `${e.specialite_detail.nom} (${e.specialite_detail.code})` : '—'}</td>}
             {showField('Groupe') && <td>{e.groupe || '-'}</td>}
-            {showField('Situation') && <td>{e.situation === 'N' ? 'Nouveau' : e.situation === 'R' ? 'Redoublant' : '-'}</td>}
+            {showField('Situation Semestre 5') && <td>{e.situation_s5 === 'N' ? 'Nouveau' : e.situation_s5 === 'R' ? 'Redoublant' : '-'}</td>}
+            {showField('Situation PFE') && <td>{e.situation_pfe === 'N' ? 'Nouveau' : e.situation_pfe === 'R' ? 'Redoublant' : '-'}</td>}
 
             <td>
 

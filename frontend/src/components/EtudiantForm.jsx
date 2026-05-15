@@ -15,7 +15,8 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
     nationalite: "",
     passport: "",
     groupe: "",
-    situation: "N",
+    situation_s5: "N",
+    situation_pfe: "N",
     licence: "",
     specialite: "",
   });
@@ -37,7 +38,8 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
         nationalite: selected.nationalite || "",
         passport: selected.passport || "",
         groupe: selected.groupe || "",
-        situation: selected.situation || "N",
+        situation_s5: selected.situation_s5 || "N",
+        situation_pfe: selected.situation_pfe || "N",
         licence:
           selected.licence != null && selected.licence !== ""
             ? String(selected.licence)
@@ -66,7 +68,8 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
         nationalite: "",
         passport: "",
         groupe: "",
-        situation: "N",
+        situation_s5: "N",
+        situation_pfe: "N",
         licence: "",
         specialite: "",
       });
@@ -91,7 +94,8 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
     nationalite: normalizeSpaces(data.nationalite),
     passport: String(data.passport || "").trim(),
     groupe: normalizeSpaces(data.groupe),
-    situation: data.situation || "N",
+    situation_s5: data.situation_s5 || "N",
+    situation_pfe: data.situation_pfe || "N",
     dateNaissance: String(data.dateNaissance || "").trim(),
     licence:
       data.licence === "" || data.licence == null || data.licence === undefined
@@ -322,8 +326,16 @@ placeholder="-"
         </div>
 
         <div className="input-group">
-          <label>Situation</label>
-          <select name="situation" value={form.situation} onChange={handleChange}>
+          <label>Situation Semestre 5</label>
+          <select name="situation_s5" value={form.situation_s5} onChange={handleChange}>
+            <option value="N">Nouveau</option>
+            <option value="R">Redoublant</option>
+          </select>
+        </div>
+
+        <div className="input-group">
+          <label>Situation PFE</label>
+          <select name="situation_pfe" value={form.situation_pfe} onChange={handleChange}>
             <option value="N">Nouveau</option>
             <option value="R">Redoublant</option>
           </select>

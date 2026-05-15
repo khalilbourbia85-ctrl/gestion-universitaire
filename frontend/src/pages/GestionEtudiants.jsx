@@ -137,7 +137,8 @@ function GestionEtudiants() {
       item.specialite != null && item.specialite !== ""
         ? Number(item.specialite)
         : null,
-    situation: item.situation && item.situation.toUpperCase().startsWith('R') ? 'R' : 'N',
+    situation_s5: item.situation_s5 && item.situation_s5.toUpperCase().startsWith('R') ? 'R' : 'N',
+    situation_pfe: item.situation_pfe && item.situation_pfe.toUpperCase().startsWith('R') ? 'R' : 'N',
   });
 
   const normalizeHeader = (header) =>
@@ -197,9 +198,13 @@ function GestionEtudiants() {
       case "groupe":
       case "group":
         return "groupe";
-      case "situation":
-      case "etat":
-        return "situation";
+      case "situation s5":
+      case "situation_s5":
+      case "situation semestre 5":
+        return "situation_s5";
+      case "situation pfe":
+      case "situation_pfe":
+        return "situation_pfe";
       default:
         return normalized;
     }
@@ -321,7 +326,8 @@ function GestionEtudiants() {
         String(e.licence_detail?.nom || "").toLowerCase().includes(term) ||
         String(e.specialite_detail?.nom || "").toLowerCase().includes(term) ||
         String(e.groupe || "").toLowerCase().includes(term) ||
-        (e.situation === 'N' ? 'nouveau' : 'redoublant').includes(term)
+        (e.situation_s5 === 'N' ? 'nouveau' : 'redoublant').includes(term) ||
+        (e.situation_pfe === 'N' ? 'nouveau' : 'redoublant').includes(term)
       );
     } else {
       return filterBy.some(field => {
@@ -336,7 +342,8 @@ function GestionEtudiants() {
           case "Licence": return String(e.licence_detail?.nom || e.licence_detail?.code || "").toLowerCase().includes(term);
           case "Spécialité": return String(e.specialite_detail?.nom || e.specialite_detail?.code || "").toLowerCase().includes(term);
           case "Groupe": return String(e.groupe || "").toLowerCase().includes(term);
-          case "Situation": return (e.situation === 'N' ? 'nouveau' : 'redoublant').includes(term) || (e.situation || "").toLowerCase().includes(term);
+          case "Situation Semestre 5": return (e.situation_s5 === 'N' ? 'nouveau' : 'redoublant').includes(term);
+          case "Situation PFE": return (e.situation_pfe === 'N' ? 'nouveau' : 'redoublant').includes(term);
           default: return false;
         }
       });
@@ -373,7 +380,7 @@ function GestionEtudiants() {
             <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
             <MultiSelectDropdown
               label="Tous les champs sélectionnés"
-              options={["Tous les champs", "Matricule", "CIN", "Nom", "Prénom", "Email", "Téléphone", "Nationalité", "Licence", "Spécialité", "Groupe", "Situation"]}
+              options={["Tous les champs", "Matricule", "CIN", "Nom", "Prénom", "Email", "Téléphone", "Nationalité", "Licence", "Spécialité", "Groupe", "Situation Semestre 5", "Situation PFE"]}
               selected={filterBy}
               onChange={setFilterBy}
             />

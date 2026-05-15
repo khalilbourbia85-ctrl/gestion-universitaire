@@ -18,7 +18,12 @@ class Etudiant(models.Model):
         ('N', 'Nouveau'),
         ('R', 'Redoublant'),
     ]
-    situation = models.CharField(
+    situation_s5 = models.CharField(
+        max_length=1, 
+        choices=SITUATION_CHOICES, 
+        default='N'
+    )
+    situation_pfe = models.CharField(
         max_length=1, 
         choices=SITUATION_CHOICES, 
         default='N'

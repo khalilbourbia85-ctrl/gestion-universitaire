@@ -55,7 +55,9 @@ class AIChatView(APIView):
             etudiants_list = Etudiant.objects.all()
             etudiants_str = ""
             for e in etudiants_list:
-                etudiants_str += f"- Nom/Prénom: {e.nom} {e.prenom}, Email: {e.email}, Spécialité: {e.specialite}, Situation: {getattr(e, 'situation', 'N/A')}\n"
+                sit_s5 = getattr(e, 'get_situation_s5_display', lambda: e.situation_s5)() if hasattr(e, 'situation_s5') else 'N/A'
+                sit_pfe = getattr(e, 'get_situation_pfe_display', lambda: e.situation_pfe)() if hasattr(e, 'situation_pfe') else 'N/A'
+                etudiants_str += f"- Nom/Prénom: {e.nom} {e.prenom}, Email: {e.email}, Spécialité: {e.specialite}, Situation S5: {sit_s5}, Situation PFE: {sit_pfe}\n"
             if not etudiants_str:
                 etudiants_str = "Aucun étudiant."
 
