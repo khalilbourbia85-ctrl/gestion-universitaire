@@ -15,6 +15,7 @@ function GestionEtudiants() {
   const [successMessage, setSuccessMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [importPreview, setImportPreview] = useState(null);
   const [licences, setLicences] = useState([]);
   const [specialites, setSpecialites] = useState([]);
 
@@ -253,6 +254,12 @@ function GestionEtudiants() {
     try {
       const rawData = await parseFile(file);
       
+      if (!rawData || !rawData.length) {
+        return alert("Aucune donnée trouvée dans le fichier.");
+      }
+
+      const rawHeaders = Object.keys(rawData[0]);
+      
       const importedData = rawData.map(row => {
         return Object.keys(row).reduce((acc, key) => {
           acc[getNormalizedKey(key)] = row[key];
@@ -260,40 +267,57 @@ function GestionEtudiants() {
         }, {});
       });
 
-      if (!Array.isArray(importedData) || !importedData.length) {
-        return alert("Aucune donnée importable trouvée.");
-      }
-
       const cleanedData = importedData
         .map(cleanEtudiant)
         .filter((item) => item.cin || item.nom || item.prenom);
 
       if (!cleanedData.length) {
-        return alert("Aucune ligne valide trouvée après nettoyage.");
+        return alert("Aucune ligne valide trouvée après nettoyage. Vérifiez les noms de colonnes (CIN, Nom, Prénom...).");
       }
 
-      setError("");
-      let successCount = 0;
+      // Check required fields based on the first mapped row
+      const firstMapped = importedData[0] || {};
+      const missingRequired = [];
+      if (!firstMapped.cin) missingRequired.push("CIN");
+      if (!firstMapped.nom) missingRequired.push("Nom");
+      if (!firstMapped.prenom) missingRequired.push("Prénom");
 
-      for (const student of cleanedData) {
-        try {
-          await axios.post("/api/etudiants/", student);
-          successCount++;
-        } catch (err) {
-          console.error("Erreur lors de l'import d'un étudiant:", err);
-        }
-      }
+      setImportPreview({
+        file: file.name,
+        rawHeaders,
+        missingRequired,
+        totalRows: rawData.length,
+        validRows: cleanedData.length,
+        data: cleanedData,
+      });
 
-      setSuccessMessage(`${successCount} étudiant(s) importé(s) avec succès`);
-      await loadData();
-      setTimeout(() => setSuccessMessage(""), 3000);
-      
     } catch (err) {
       console.error(err);
-      setError("Erreur lors de l'importation: " + (err.message || "Veuillez vérifier le format de vos données."));
+      setError("Erreur lors de la lecture du fichier: " + (err.message || "Veuillez vérifier le format."));
     } finally {
       if (fileRef.current) fileRef.current.value = "";
     }
+  };
+
+  const confirmImport = async () => {
+    if (!importPreview) return;
+    
+    setLoading(true);
+    let successCount = 0;
+    
+    for (const student of importPreview.data) {
+      try {
+        await axios.post("/api/etudiants/", student);
+        successCount++;
+      } catch (err) {
+        console.error("Erreur import étudiant:", err);
+      }
+    }
+    
+    setSuccessMessage(`${successCount} étudiant(s) importé(s) avec succès`);
+    setImportPreview(null);
+    await loadData();
+    setTimeout(() => setSuccessMessage(""), 4000);
   };
 
   const handleDelete = async (idEtudiant) => {
@@ -461,6 +485,55 @@ function GestionEtudiants() {
         accept=".csv,.json,.xlsx,.xls"
         onChange={handleImport}
       />
+
+      {importPreview && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px', textAlign: 'center' }}>
+            <h3 style={{ marginTop: 0, color: '#1e293b' }}>Validation de l'importation</h3>
+            <p style={{ color: '#475569', marginBottom: '20px' }}>Fichier : <strong>{importPreview.file}</strong></p>
+            
+            <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '20px', textAlign: 'left', border: '1px solid #e2e8f0' }}>
+              <p style={{ marginBottom: '10px' }}><strong>Colonnes détectées dans le fichier :</strong><br/> 
+                <span style={{ color: '#64748b', fontSize: '14px' }}>{importPreview.rawHeaders.join(', ')}</span>
+              </p>
+              
+              {importPreview.missingRequired.length > 0 ? (
+                <p style={{ color: '#ef4444', marginTop: '10px', fontSize: '14px', background: '#fef2f2', padding: '10px', borderRadius: '5px' }}>
+                  ⚠️ <strong>Attention :</strong> Les colonnes requises suivantes n'ont pas été trouvées ou reconnues : <strong>{importPreview.missingRequired.join(', ')}</strong>.<br/> 
+                  Si votre fichier les nomme différemment, renommez-les avant d'importer. Sinon l'importation risque d'échouer.
+                </p>
+              ) : (
+                <p style={{ color: '#10b981', marginTop: '10px', fontSize: '14px', background: '#ecfdf5', padding: '10px', borderRadius: '5px' }}>
+                  ✅ Correspondance automatique réussie (CIN, Nom, Prénom trouvés).
+                </p>
+              )}
+              
+              <p style={{ marginTop: '15px', fontSize: '15px' }}>
+                Données reconnues : <strong>{importPreview.validRows}</strong> ligne(s) sur {importPreview.totalRows}.<br/>
+                <em>Ces étudiants seront affectés à l'année : {anneeUniversitaire}</em>
+              </p>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button 
+                onClick={confirmImport} 
+                className="btn save-btn" 
+                style={{ background: '#3b82f6', color: 'white' }}
+                disabled={loading && importPreview}
+              >
+                Confirmer l'importation
+              </button>
+              <button 
+                onClick={() => setImportPreview(null)} 
+                className="btn cancel-btn"
+                disabled={loading && importPreview}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <div className="modal-overlay">
