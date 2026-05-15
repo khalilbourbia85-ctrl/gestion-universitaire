@@ -198,13 +198,9 @@ function GestionEtudiants() {
       case "groupe":
       case "group":
         return "groupe";
-      case "situation s5":
-      case "situation_s5":
-      case "situation semestre 5":
-        return "situation_s5";
-      case "situation pfe":
-      case "situation_pfe":
-        return "situation_pfe";
+      case "situation":
+      case "etat":
+        return "situation";
       default:
         return normalized;
     }
@@ -342,8 +338,7 @@ function GestionEtudiants() {
           case "Licence": return String(e.licence_detail?.nom || e.licence_detail?.code || "").toLowerCase().includes(term);
           case "Spécialité": return String(e.specialite_detail?.nom || e.specialite_detail?.code || "").toLowerCase().includes(term);
           case "Groupe": return String(e.groupe || "").toLowerCase().includes(term);
-          case "Situation Semestre 5": return (e.situation_s5 === 'N' ? 'nouveau' : 'redoublant').includes(term);
-          case "Situation PFE": return (e.situation_pfe === 'N' ? 'nouveau' : 'redoublant').includes(term);
+          case "Situation": return (e.situation_s5 === 'N' ? 'nouveau' : 'redoublant').includes(term) || (e.situation_pfe === 'N' ? 'nouveau' : 'redoublant').includes(term);
           default: return false;
         }
       });
@@ -380,7 +375,7 @@ function GestionEtudiants() {
             <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
             <MultiSelectDropdown
               label="Tous les champs sélectionnés"
-              options={["Tous les champs", "Matricule", "CIN", "Nom", "Prénom", "Email", "Téléphone", "Nationalité", "Licence", "Spécialité", "Groupe", "Situation Semestre 5", "Situation PFE"]}
+              options={["Tous les champs", "Matricule", "CIN", "Nom", "Prénom", "Email", "Téléphone", "Nationalité", "Licence", "Spécialité", "Groupe", "Situation"]}
               selected={filterBy}
               onChange={setFilterBy}
             />
