@@ -20,6 +20,7 @@ function GestionEnseignants() {
   const [errorMessage, setErrorMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBy, setFilterBy] = useState(["Tous les champs"]);
+  const [activeTab, setActiveTab] = useState("informations");
 
   const fileRef = useRef(null);
 
@@ -316,43 +317,67 @@ function GestionEnseignants() {
             onChange={handleImport}
           />
 
-          {/* Tableau principal */}
-          <EnseignantsTable
-            enseignants={filteredEnseignants}
-            onEdit={(e) => {
-              setSelected(e);
-              // Initialiser currentForm avec les données de l'enseignant, en s'assurant que diplome et autres champs existent
-              setCurrentForm({
-                ...e,
-                diplome: e.diplome || {
-                  idDiplome: "",
-                  libelleDiplome: "",
-                  specialite: "",
-                  universite: "",
-                  dateObtention: ""
-                },
-                // Assurer que tous les champs de contrat existent
-                typeContrat: e.typeContrat || "",
-                dateTitularisation: e.dateTitularisation || "",
-                anneeInscription: e.anneeInscription || "",
-                nbHeures: e.nbHeures || "",
-                tauxHoraire: e.tauxHoraire || "",
-                dureeContrat: e.dureeContrat || "",
-                dateDebut: e.dateDebut || "",
-                dateFin: e.dateFin || "",
-                sujetThese: e.sujetThese || "",
-                universite: e.universite || "",
-                primeRecherche: e.primeRecherche || "",
-                numeroOrdre: e.numeroOrdre || ""
-              });
-              setShowForm(true);
-            }}
-            onDelete={handleDelete}
-            filterBy={filterBy}
-          />
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px' }}>
+            <button 
+              className={`btn ${activeTab === 'informations' ? 'save-btn' : 'cancel-btn'}`}
+              style={activeTab === 'informations' ? {background: '#3b82f6', color: 'white', border: 'none'} : {}}
+              onClick={() => setActiveTab('informations')}
+            >
+              Informations des enseignants
+            </button>
+            <button 
+              className={`btn ${activeTab === 'diplomes' ? 'save-btn' : 'cancel-btn'}`}
+              style={activeTab === 'diplomes' ? {background: '#3b82f6', color: 'white', border: 'none'} : {}}
+              onClick={() => setActiveTab('diplomes')}
+            >
+              Diplômes
+            </button>
+            <button 
+              className={`btn ${activeTab === 'contrats' ? 'save-btn' : 'cancel-btn'}`}
+              style={activeTab === 'contrats' ? {background: '#3b82f6', color: 'white', border: 'none'} : {}}
+              onClick={() => setActiveTab('contrats')}
+            >
+              Contrats
+            </button>
+          </div>
 
-          <DiplomesEnseignant enseignants={filteredEnseignants} />
-          <ContratsEnseignant enseignants={filteredEnseignants} />
+          {/* Tableau principal */}
+          {activeTab === 'informations' && (
+            <EnseignantsTable
+              enseignants={filteredEnseignants}
+              onEdit={(e) => {
+                setSelected(e);
+                setCurrentForm({
+                  ...e,
+                  diplome: e.diplome || {
+                    idDiplome: "",
+                    libelleDiplome: "",
+                    specialite: "",
+                    universite: "",
+                    dateObtention: ""
+                  },
+                  typeContrat: e.typeContrat || "",
+                  dateTitularisation: e.dateTitularisation || "",
+                  anneeInscription: e.anneeInscription || "",
+                  nbHeures: e.nbHeures || "",
+                  tauxHoraire: e.tauxHoraire || "",
+                  dureeContrat: e.dureeContrat || "",
+                  dateDebut: e.dateDebut || "",
+                  dateFin: e.dateFin || "",
+                  sujetThese: e.sujetThese || "",
+                  universite: e.universite || "",
+                  primeRecherche: e.primeRecherche || "",
+                  numeroOrdre: e.numeroOrdre || ""
+                });
+                setShowForm(true);
+              }}
+              onDelete={handleDelete}
+              filterBy={filterBy}
+            />
+          )}
+
+          {activeTab === 'diplomes' && <DiplomesEnseignant enseignants={filteredEnseignants} />}
+          {activeTab === 'contrats' && <ContratsEnseignant enseignants={filteredEnseignants} />}
         </>
       )}
 
