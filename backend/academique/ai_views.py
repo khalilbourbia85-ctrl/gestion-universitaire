@@ -123,9 +123,9 @@ class AIChatView(APIView):
                     "reply": "⚠️ La clé GROQ_API_KEY n'est pas configurée dans settings.py."
                 })
 
-            # Appel à l'Intelligence Artificielle LLaMA 3.1 via Groq
+            # Appel à l'Intelligence Artificielle LLaMA 3.3 70B via Groq
             response = client.chat.completions.create(
-                model="llama-3.1-8b-instant", # Nouveau modèle LLaMA 3.1
+                model="llama-3.3-70b-versatile", # Modèle beaucoup plus intelligent
                 messages=messages,
                 temperature=0.1, # Réduit à 0.1 pour empêcher l'IA d'halluciner ou d'inventer
                 max_tokens=600
