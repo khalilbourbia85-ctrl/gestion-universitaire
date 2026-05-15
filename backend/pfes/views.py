@@ -23,7 +23,7 @@ def normalize_header(value):
     header = re.sub(r'[^a-z0-9]', '', header)
     return header
 
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 
 def send_pfe_assignment_email(pfe, encadrant):
@@ -39,15 +39,32 @@ def send_pfe_assignment_email(pfe, encadrant):
         f"Cordialement,\n"
         f"L’administrateur"
     )
-    send_mail(sujet, message, settings.DEFAULT_FROM_EMAIL, [encadrant.email], fail_silently=True)
-    
+    msg_encadrant = EmailMultiAlternatives(
+        subject=sujet,
+        body=message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[encadrant.email],
+        reply_to=[settings.DEFAULT_FROM_EMAIL]
+    )
+    html_encadrant = f"<p>Bonjour {encadrant.nom} {encadrant.prenom},</p><p>Vous avez été assigné en tant qu’encadrant pour le PFE suivant :</p><p><strong>Sujet :</strong> {pfe.sujet}<br><strong>Étudiants :</strong> {liste_etudiants}</p><p>Cordialement,<br>L’administrateur</p>"
+    msg_encadrant.attach_alternative(html_encadrant, "text/html")
+    msg_encadrant.send(fail_silently=True)
     etudiants = pfe.etudiants.all()
     if etudiants:
         sujet_etu = "Affectation de votre encadrant de PFE"
         message_etu = f"Bonjour,\n\nVotre PFE ({pfe.sujet}) a été assigné à l'encadrant {encadrant.nom} {encadrant.prenom} ({encadrant.email}).\n\nCordialement,\nLe Département"
         dest_etu = [etu.email for etu in etudiants if etu.email]
         if dest_etu:
-            send_mail(sujet_etu, message_etu, settings.DEFAULT_FROM_EMAIL, dest_etu, fail_silently=True)
+            msg_etu = EmailMultiAlternatives(
+                subject=sujet_etu,
+                body=message_etu,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=dest_etu,
+                reply_to=[settings.DEFAULT_FROM_EMAIL]
+            )
+            html_etu = f"<p>Bonjour,</p><p>Votre PFE (<strong>{pfe.sujet}</strong>) a été assigné à l'encadrant <strong>{encadrant.nom} {encadrant.prenom}</strong> ({encadrant.email}).</p><p>Cordialement,<br>Le Département</p>"
+            msg_etu.attach_alternative(html_etu, "text/html")
+            msg_etu.send(fail_silently=True)
 
 def send_soutenance_email(soutenance, is_update=False):
     prefix = "Mise à jour : " if is_update else ""
@@ -81,7 +98,27 @@ def send_soutenance_email(soutenance, is_update=False):
             destinataires.append(etu.email)
             
     if destinataires:
-        send_mail(sujet, message, settings.DEFAULT_FROM_EMAIL, list(set(destinataires)), fail_silently=True)
+        msg = EmailMultiAlternatives(
+            subject=sujet,
+            body=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=list(set(destinataires)),
+            reply_to=[settings.DEFAULT_FROM_EMAIL]
+        )
+        html_message = (
+            f"<p>Bonjour,</p>"
+            f"<p>Une soutenance vous concernant a été programmée ou mise à jour.</p>"
+            f"<ul>"
+            f"<li><strong>Date :</strong> {date_s}</li>"
+            f"<li><strong>Heure :</strong> {heure_s}</li>"
+            f"<li><strong>Salle :</strong> {salle}</li>"
+            f"<li><strong>Encadrant :</strong> {enc}</li>"
+            f"<li><strong>Rapporteur :</strong> {rap}</li>"
+            f"</ul>"
+            f"<p>Cordialement,<br>Le Département</p>"
+        )
+        msg.attach_alternative(html_message, "text/html")
+        msg.send(fail_silently=True)
 
 
 
