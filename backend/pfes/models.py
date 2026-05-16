@@ -62,6 +62,8 @@ class PFE(models.Model):
     lieu_stage = models.CharField(max_length=200, null=True, blank=True)
     convention_file = models.FileField(upload_to='conventions/', null=True, blank=True)
     lettre_affectation_file = models.FileField(upload_to='lettres_affectation/', null=True, blank=True)
+    resultat_soutenance_technique = models.CharField(max_length=100, null=True, blank=True, help_text="Résultat d'évaluation de Soutenance technique")
+    resultat_soutenance_finale = models.CharField(max_length=100, null=True, blank=True, help_text="Résultat d'évaluation de Soutenance finale")
 
     def __str__(self):
         return f"PFE {self.idPfe} - {self.sujet[:40]}"
@@ -85,14 +87,29 @@ class PFEStudent(models.Model):
 
 
 class Soutenance(models.Model):
+    TYPE_SOUTENANCE_CHOICES = [
+        ('technique', 'Technique'),
+        ('finale', 'Finale'),
+    ]
+
     idSoutenance = models.AutoField(primary_key=True)
     pfe = models.OneToOneField(PFE, on_delete=models.CASCADE, related_name='soutenance', null=True, blank=True)
+    type_soutenance = models.CharField(
+        max_length=20,
+        choices=TYPE_SOUTENANCE_CHOICES,
+        default='finale',
+        help_text='Type de soutenance (Technique ou Finale).'
+    )
     date_soutenance = models.DateField()
     heure_soutenance = models.TimeField(
         default=time(9, 0),
         help_text='Heure exacte de début de la soutenance.',
     )
-    duree = models.PositiveIntegerField(help_text='Durée en minutes')
+    duree = models.PositiveIntegerField(
+        help_text='Durée en minutes',
+        null=True,
+        blank=True
+    )
     salle = models.CharField(max_length=100)
     encadrant = models.ForeignKey(
         Enseignant,

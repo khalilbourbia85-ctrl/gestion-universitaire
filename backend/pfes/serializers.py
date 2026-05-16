@@ -82,6 +82,8 @@ class PFESerializer(serializers.ModelSerializer):
             'lieu_stage',
             'convention_file',
             'lettre_affectation_file',
+            'resultat_soutenance_technique',
+            'resultat_soutenance_finale',
         ]
 
     def validate_etudiants(self, value):
@@ -183,6 +185,7 @@ class SoutenanceSerializer(serializers.ModelSerializer):
         model = Soutenance
         fields = [
             'idSoutenance',
+            'type_soutenance',
             'pfe',
             'date_soutenance',
             'heure_soutenance',
@@ -218,6 +221,7 @@ class SoutenanceSerializer(serializers.ModelSerializer):
         date_s = attrs.get('date_soutenance')
         heure_s = attrs.get('heure_soutenance')
         duree = attrs.get('duree')
+        type_s = attrs.get('type_soutenance')
         enc = attrs.get('encadrant')
         rap = attrs.get('rapporteur')
         etudiants = attrs.get('etudiants')
@@ -226,7 +230,8 @@ class SoutenanceSerializer(serializers.ModelSerializer):
             if salle is None: salle = self.instance.salle
             if date_s is None: date_s = self.instance.date_soutenance
             if heure_s is None: heure_s = self.instance.heure_soutenance
-            if duree is None: duree = self.instance.duree
+            if duree is None: duree = getattr(self.instance, 'duree', None)
+            if type_s is None: type_s = getattr(self.instance, 'type_soutenance', 'finale')
             if enc is None: enc = self.instance.encadrant
             if rap is None: rap = self.instance.rapporteur
             if etudiants is None: etudiants = self.instance.etudiants.all()
@@ -242,7 +247,12 @@ class SoutenanceSerializer(serializers.ModelSerializer):
                         'etudiants': f"L'étudiant {etudiant} a déjà une soutenance programmée."
                     })
 
-        # 2. Chevauchement Salles et Enseignants
+        # 2. Chevauchement Salles et Enseignants (Seulement si duree est definie)
+        if type_s == 'finale' and duree is None:
+            raise serializers.ValidationError({
+                'duree': "La durée est obligatoire pour une soutenance finale."
+            })
+
         if date_s and heure_s and duree is not None:
             from django.db.models import Q
             start_dt = datetime.combine(date_s, heure_s)
@@ -262,6 +272,8 @@ class SoutenanceSerializer(serializers.ModelSerializer):
                     soutenances_jour = soutenances_jour.exclude(pk=self.instance.pk)
                 
                 for s in soutenances_jour:
+                    if s.duree is None:
+                        continue
                     s_start = datetime.combine(s.date_soutenance, s.heure_soutenance)
                     s_end = s_start + timedelta(minutes=s.duree)
                     

@@ -69,6 +69,8 @@ function PFEsTable({
           {filterBy.includes('Tous les champs') && <th style={{ width: '25%' }}>Étudiants</th>}
           {showField('Encadrant') && <th style={{ width: '15%' }}>Encadrant</th>}
           {showField('Type contrat enc.') && <th style={{ width: '12%' }}>Type contrat (enc.)</th>}
+          {filterBy.includes('Tous les champs') && <th style={{ width: '10%' }}>Rés. Tech.</th>}
+          {filterBy.includes('Tous les champs') && <th style={{ width: '10%' }}>Rés. Fin.</th>}
           <th style={{ width: '150px' }}>Actions</th>
         </tr>
       </thead>
@@ -83,6 +85,8 @@ function PFEsTable({
             {filterBy.includes('Tous les champs') && <td>{renderStudents(pfe)}</td>}
             {showField('Encadrant') && <td>{pfe?.encadrant_detail ? `${pfe.encadrant_detail.nom} ${pfe.encadrant_detail.prenom}` : '-'}</td>}
             {showField('Type contrat enc.') && <td>{pfe?.encadrant_detail?.typeContrat || '—'}</td>}
+            {filterBy.includes('Tous les champs') && <td>{pfe?.resultat_soutenance_technique || '-'}</td>}
+            {filterBy.includes('Tous les champs') && <td>{pfe?.resultat_soutenance_finale || '-'}</td>}
             <td>
               {!disableActions ? (
                 <>

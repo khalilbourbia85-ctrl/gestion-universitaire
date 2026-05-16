@@ -34,6 +34,8 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
   const [errorMessage, setErrorMessage] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
   const [rulesAccepted, setRulesAccepted] = useState(false);
+  const [resultatTechnique, setResultatTechnique] = useState('');
+  const [resultatFinale, setResultatFinale] = useState('');
 
   useEffect(() => {
     if (pfe) {
@@ -75,6 +77,8 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
       setLicence(initialLicence);
       setEncadrant(pfe.encadrant || '');
       setRulesAccepted(Boolean(pfe?.rulesAccepted));
+      setResultatTechnique(pfe.resultat_soutenance_technique || '');
+      setResultatFinale(pfe.resultat_soutenance_finale || '');
     } else {
       setRulesAccepted(false);
       setSujet('');
@@ -84,6 +88,8 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
       setLicence('');
       setEncadrant('');
       setSelectedEtudiants([]);
+      setResultatTechnique('');
+      setResultatFinale('');
     }
   }, [pfe, specialites, etudiants]);
 
@@ -124,6 +130,8 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
       specialite: specialite.trim(),
       encadrant: encadrant || null,
       etudiants: selectedEtudiants,
+      resultat_soutenance_technique: resultatTechnique.trim(),
+      resultat_soutenance_finale: resultatFinale.trim(),
       idPfe: pfe?.idPfe,
     });
   };
@@ -213,19 +221,20 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
                   })
                   .slice(0, 10)
                   .map((etudiant) => {
-                    const sid = Number(etudiant.idEtudiant);
+                    const etudId = etudiant.idEtudiant || etudiant.id;
+                    const sid = Number(etudId);
                     const dejaSelectionne = selectedEtudiants.some((x) => Number(x) === sid);
                     const prisAilleurs = etudiantsDejaPfeAilleurs.has(sid) && !dejaSelectionne;
                     return (
                       <label
-                        key={etudiant.idEtudiant}
+                        key={etudId}
                         className="checkbox-label"
                         style={prisAilleurs ? { opacity: 0.55 } : undefined}
                       >
                         <input
                           type="checkbox"
-                          value={etudiant.idEtudiant}
-                          checked={selectedEtudiants.includes(etudiant.idEtudiant)}
+                          value={etudId}
+                          checked={selectedEtudiants.includes(etudId) || selectedEtudiants.includes(sid)}
                           onChange={handleStudentChange}
                           disabled={prisAilleurs}
                         />
@@ -340,6 +349,29 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
               ))}
             </select>
           </div>
+
+          {pfe && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div className="form-row">
+                <label>Résultat Soutenance Technique</label>
+                <input
+                  type="text"
+                  value={resultatTechnique}
+                  placeholder="Ex: Validé, Non validé, Note..."
+                  onChange={(e) => setResultatTechnique(e.target.value)}
+                />
+              </div>
+              <div className="form-row">
+                <label>Résultat Soutenance Finale</label>
+                <input
+                  type="text"
+                  value={resultatFinale}
+                  placeholder="Ex: 16/20, Mention..."
+                  onChange={(e) => setResultatFinale(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
 
 
 
