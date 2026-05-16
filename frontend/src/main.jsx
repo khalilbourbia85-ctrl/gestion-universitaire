@@ -13,8 +13,8 @@ import axios from "axios";
 //   axios.defaults.headers.common['Authorization'] = `Token ${token}`;
 // }
 
-// Set dynamic base URL for production
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || '';
+// Set dynamic base URL for production or fallback to localhost for development
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '');
 
 ReactDOM.createRoot(document.getElementById("root")).render(
 
