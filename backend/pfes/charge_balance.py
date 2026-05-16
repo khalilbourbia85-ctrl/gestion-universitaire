@@ -5,23 +5,15 @@ from typing import Optional
 from .models import PFE, Soutenance
 
 
-def get_plafond_groupes_pfe() -> int:
-    """Plafond global (identique pour tous les encadrants / rapporteurs), configurable en base."""
-    from .models import ParametresPfe
-
-    p = ParametresPfe.objects.filter(pk=1).first()
-    if p is None:
-        return 5
-    try:
-        v = int(p.plafond_groupes)
-        return max(1, min(99, v))
-    except (TypeError, ValueError):
-        return 5
-
+def get_plafond_groupes_pfe(enseignant=None) -> int:
+    """Plafond individuel défini par l'enseignant."""
+    if enseignant and hasattr(enseignant, 'plafond_pfe'):
+        return max(1, min(99, getattr(enseignant, 'plafond_pfe', 5)))
+    return 5
 
 def max_groupes_plafond(enseignant=None) -> int:
-    """Compatibilité : le plafond ne dépend plus de l’enseignant."""
-    return get_plafond_groupes_pfe()
+    """Le plafond dépend désormais de chaque enseignant."""
+    return get_plafond_groupes_pfe(enseignant)
 
 
 def count_pfe_encadrant(enseignant) -> int:

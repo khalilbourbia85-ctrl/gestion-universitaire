@@ -21,6 +21,10 @@ class Enseignant(models.Model):
     grade = models.CharField(max_length=50)
     dateRecrutement = models.DateField()
     statutAdministratif = models.CharField(max_length=100, blank=True, null=True)
+    plafond_pfe = models.PositiveSmallIntegerField(
+        default=5,
+        help_text='Nombre maximal d\'étudiants/groupes que cet enseignant souhaite encadrer.'
+    )
 
     def __str__(self):
         return f"{self.nom} {self.prenom}"

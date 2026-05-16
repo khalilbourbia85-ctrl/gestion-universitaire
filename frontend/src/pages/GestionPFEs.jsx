@@ -62,15 +62,15 @@ function GestionPFEs() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  /** Plafond global (tous les encadrants) — même valeur que sur le serveur après chargement / enregistrement. */
-  const [plafondGroupes, setPlafondGroupes] = useState(5);
-  const lastSavedPlafondRef = useRef(5);
-  const [savingPlafond, setSavingPlafond] = useState(false);
-  const pfeFileRef = useRef(null);
-
   const getEncadrantMaxGroupes = useCallback(
-    (_matriculeOrEnseignant) => clampPlafondInput(plafondGroupes),
-    [plafondGroupes]
+    (_matriculeOrEnseignant) => {
+      const ens = typeof _matriculeOrEnseignant === 'object' ? _matriculeOrEnseignant : enseignants.find(e => e.matricule === _matriculeOrEnseignant);
+      if (ens && ens.plafond_pfe !== undefined) {
+        return clampPlafondInput(ens.plafond_pfe);
+      }
+      return 5;
+    },
+    [enseignants]
   );
 
   const loadData = async () => {
@@ -102,9 +102,7 @@ function GestionPFEs() {
       );
       setEtudiants(Array.isArray(etudiantRes.data) ? etudiantRes.data : (etudiantRes.data?.results || []));
       setSpecialites(Array.isArray(specRes.data) ? specRes.data : (specRes.data?.results || []));
-      const pg = clampPlafondInput(paramRes?.data?.plafond_groupes ?? 5);
-      setPlafondGroupes(pg);
-      lastSavedPlafondRef.current = pg;
+      setSpecialites(Array.isArray(specRes.data) ? specRes.data : (specRes.data?.results || []));
     } catch (err) {
       const message = err.response?.data?.detail || err.message || 'Impossible de charger les données. Vérifiez que le backend est disponible.';
       setError(message);
@@ -575,30 +573,16 @@ function GestionPFEs() {
     String(a.prenom || '').localeCompare(String(b.prenom || ''), 'fr', { sensitivity: 'base' })
   );
 
-  const plafondDirty =
-    clampPlafondInput(plafondGroupes) !== clampPlafondInput(lastSavedPlafondRef.current);
-
-  const handleSavePlafondGlobal = async () => {
-    setSavingPlafond(true);
-    setError('');
+  const handleUpdateTeacherPlafond = async (matricule, newValue) => {
     try {
-      const cible = clampPlafondInput(plafondGroupes);
-      const { data } = await axios.patch('/api/pfes/parametres/', { plafond_groupes: cible });
-      const v = clampPlafondInput(data?.plafond_groupes ?? cible);
-      setPlafondGroupes(v);
-      lastSavedPlafondRef.current = v;
-      setMessage('Plafond global enregistré.');
+      const val = clampPlafondInput(newValue);
+      await axios.patch(`/api/enseignants/${matricule}/`, { plafond_pfe: val });
+      setEnseignants(prev => prev.map(e => e.matricule === matricule ? { ...e, plafond_pfe: val } : e));
+      setMessage(`Capacité mise à jour pour l'enseignant.`);
+      setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      const d = err.response?.data;
-      const msg =
-        (typeof d === 'string' && d) ||
-        d?.detail ||
-        d?.plafond_groupes ||
-        (d && typeof d === 'object' ? JSON.stringify(d) : null) ||
-        "Erreur lors de l'enregistrement du plafond.";
-      setError(msg);
-    } finally {
-      setSavingPlafond(false);
+      console.error(err);
+      setError("Erreur lors de la mise à jour de la capacité d'encadrement.");
     }
   };
 
@@ -719,50 +703,10 @@ function GestionPFEs() {
       ) : (
         <>
           <div className="stats-card">
-            <h3>Plafond global de groupes PFE (tous les encadrants)</h3>
+            <h3>Capacité d'encadrement par enseignant</h3>
             <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#64748b' }}>
-              Le même plafond s’applique à chaque encadrant (et au même titre pour le rôle rapporteur
-              côté soutenances). Modifiez la valeur puis enregistrez.
+              Définissez le nombre d'étudiants (ou groupes PFE) que chaque enseignant souhaite encadrer.
             </p>
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                gap: '12px',
-                marginBottom: '16px',
-              }}
-            >
-              <label htmlFor="plafond-global-pfe" style={{ fontWeight: 600 }}>
-                Max. groupes simultanés
-              </label>
-              <input
-                id="plafond-global-pfe"
-                type="number"
-                min={1}
-                max={99}
-                style={{ width: '80px', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                value={plafondGroupes}
-                onChange={(ev) => {
-                  const v = ev.target.value;
-                  if (v === '') return;
-                  const parsed = parseInt(v, 10);
-                  if (!Number.isNaN(parsed)) setPlafondGroupes(parsed);
-                }}
-                onBlur={() => setPlafondGroupes((x) => clampPlafondInput(x))}
-              />
-              <button
-                type="button"
-                className="btn"
-                disabled={savingPlafond || !plafondDirty}
-                onClick={handleSavePlafondGlobal}
-              >
-                {savingPlafond ? 'Enregistrement…' : 'Enregistrer le plafond'}
-              </button>
-              {!plafondDirty && (
-                <span style={{ fontSize: '13px', color: '#64748b' }}>Modifiez la valeur pour enregistrer.</span>
-              )}
-            </div>
             <div style={{ maxHeight: '320px', overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
               <table className="table" style={{ margin: 0 }}>
                 <thead>
@@ -770,13 +714,14 @@ function GestionPFEs() {
                     <th>Matricule</th>
                     <th>Nom</th>
                     <th>Prénom</th>
+                    <th style={{ width: '150px' }}>Capacité Max</th>
                     <th style={{ width: '100px' }}>Actifs</th>
                   </tr>
                 </thead>
                 <tbody>
                   {enseignantsTriés.length === 0 ? (
                     <tr>
-                      <td colSpan={4} style={{ color: '#64748b' }}>
+                      <td colSpan={5} style={{ color: '#64748b' }}>
                         Aucun encadrant chargé.
                       </td>
                     </tr>
@@ -793,8 +738,7 @@ function GestionPFEs() {
                           style={
                             plafondAtteint
                               ? {
-                                backgroundColor: '#e2e8f0',
-                                color: '#475569',
+                                backgroundColor: '#f8fafc',
                               }
                               : undefined
                           }
@@ -803,10 +747,25 @@ function GestionPFEs() {
                           <td>{e.nom}</td>
                           <td>{e.prenom}</td>
                           <td>
+                            <input
+                              type="number"
+                              min={1}
+                              max={99}
+                              style={{ width: '80px', padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                              value={max}
+                              onChange={(ev) => {
+                                const v = ev.target.value;
+                                if (v !== '') {
+                                  handleUpdateTeacherPlafond(e.matricule, parseInt(v, 10));
+                                }
+                              }}
+                            />
+                          </td>
+                          <td>
                             <span
                               style={{
                                 fontWeight: 600,
-                                color: plafondAtteint ? '#64748b' : '#0f172a',
+                                color: plafondAtteint ? '#ef4444' : '#10b981',
                               }}
                             >
                               {actifs}/{max}

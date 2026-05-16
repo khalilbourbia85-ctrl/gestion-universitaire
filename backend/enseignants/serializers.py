@@ -449,6 +449,7 @@ class EnseignantSerializer(serializers.ModelSerializer):
             'grade',
             'dateRecrutement',
             'statutAdministratif',
+            'plafond_pfe',
             'diplome',
             'typeContrat',
             'dateDebut',
