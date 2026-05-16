@@ -157,6 +157,37 @@ function GestionPFEs() {
     };
   };
 
+  const getEtudiantStats = () => {
+    const assignedIds = new Set();
+    (pfes || []).forEach(p => {
+      if (Array.isArray(p.etudiants_detail)) {
+        p.etudiants_detail.forEach(e => {
+          const id = e.idEtudiant || e.id;
+          if (id != null) assignedIds.add(String(id));
+        });
+      } else if (Array.isArray(p.etudiants)) {
+        p.etudiants.forEach(e => {
+          const id = typeof e === 'object' ? (e.idEtudiant || e.id) : e;
+          if (id != null) assignedIds.add(String(id));
+        });
+      }
+    });
+
+    const affectes = [];
+    const nonAffectes = [];
+
+    (etudiants || []).forEach(e => {
+      const idStr = String(e.idEtudiant || e.id);
+      if (assignedIds.has(idStr)) {
+        affectes.push(e);
+      } else {
+        nonAffectes.push(e);
+      }
+    });
+
+    return { affectes, nonAffectes };
+  };
+
   const safePFEs = Array.isArray(pfes) ? pfes : [];
   const filteredPFEs = safePFEs.filter((item) => {
     if (!searchTerm.trim()) return true;
@@ -859,6 +890,68 @@ function GestionPFEs() {
                 <span className="stat-label">Encadrants disponibles:</span>
                 <span className="stat-value">{getEncadrantStats().availableEncadrants}/{getEncadrantStats().totalEncadrants}</span>
               </div>
+              <div className="stat-item" style={{ borderLeft: '2px solid #e2e8f0', paddingLeft: '16px' }}>
+                <span className="stat-label">Étudiants avec PFE:</span>
+                <span className="stat-value" style={{ color: '#10b981' }}>{getEtudiantStats().affectes.length}</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">Étudiants sans PFE:</span>
+                <span className="stat-value" style={{ color: '#ef4444' }}>{getEtudiantStats().nonAffectes.length}</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+            <div className="stats-card" style={{ margin: 0 }}>
+              <h3>❌ Étudiants non affectés</h3>
+              <div style={{ maxHeight: '250px', overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <table className="table" style={{ margin: 0 }}>
+                  <thead>
+                    <tr>
+                      <th>CIN</th>
+                      <th>Nom Prénom</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {getEtudiantStats().nonAffectes.length === 0 ? (
+                      <tr><td colSpan={2} style={{ color: '#64748b' }}>Tous les étudiants ont un PFE.</td></tr>
+                    ) : (
+                      getEtudiantStats().nonAffectes.map((e, idx) => (
+                        <tr key={idx}>
+                          <td>{e.cin}</td>
+                          <td>{e.nom} {e.prenom}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="stats-card" style={{ margin: 0 }}>
+              <h3>✅ Étudiants affectés</h3>
+              <div style={{ maxHeight: '250px', overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <table className="table" style={{ margin: 0 }}>
+                  <thead>
+                    <tr>
+                      <th>CIN</th>
+                      <th>Nom Prénom</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {getEtudiantStats().affectes.length === 0 ? (
+                      <tr><td colSpan={2} style={{ color: '#64748b' }}>Aucun étudiant affecté.</td></tr>
+                    ) : (
+                      getEtudiantStats().affectes.map((e, idx) => (
+                        <tr key={idx}>
+                          <td>{e.cin}</td>
+                          <td>{e.nom} {e.prenom}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -894,7 +987,7 @@ function GestionPFEs() {
           if (selectedPFE && e.matricule === selectedPFE.encadrant) return true;
           const k = matriculeKey(e.matricule);
           const used = k ? encadrantCount[k] || 0 : 0;
-          return used < clampPlafondInput(plafondGroupes);
+          return used < getEncadrantMaxGroupes(e);
         });
 
         return (
