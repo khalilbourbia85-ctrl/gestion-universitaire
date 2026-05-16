@@ -172,68 +172,6 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
         {errorMessage && <div className="success-message" style={{ background: '#e53e3e' }}>{errorMessage}</div>}
         <form onSubmit={handleSave}>
           <div className="form-row">
-            <label>Sujet</label>
-            <textarea
-              value={sujet}
-              onChange={(e) => setSujet(e.target.value)}
-              rows={3}
-              required
-            />
-          </div>
-
-          <div className="form-row">
-            <label>Durée (en mois)</label>
-            <input
-              type="number"
-              value={duree}
-              min="1"
-              placeholder="Ex: 6"
-              onChange={(e) => setDuree(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="form-row">
-            <label>Lieu de stage</label>
-            <input
-              type="text"
-              value={lieu_stage}
-              placeholder="Entreprise ou lieu"
-              onChange={(e) => setLieu_stage(e.target.value)}
-            />
-          </div>
-
-          <div className="form-row">
-            <label>Spécialité</label>
-            <select
-              value={specialite}
-              onChange={(e) => setSpecialite(e.target.value)}
-              required
-            >
-              <option value="">Sélectionner une spécialité</option>
-              {specialites
-                .filter(spec => !licence || String(spec.licence) === String(licence))
-                .map((spec) => (
-                <option key={spec.id} value={spec.nom}>
-                  {spec.nom}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-row">
-            <label>Encadrant (Optionnel)</label>
-            <select value={encadrant} onChange={(e) => setEncadrant(e.target.value)}>
-              <option value="">Sélectionner un encadrant</option>
-              {enseignants.map((enseignant) => (
-                <option key={enseignant.matricule} value={enseignant.id ?? enseignant.matricule}>
-                  {enseignant.nom} {enseignant.prenom} ({enseignant.matricule})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-row">
             <label>Étudiants *</label>
             <div style={{ marginBottom: '8px', fontSize: '13px', color: '#64748b' }}>
               Sélectionnez {selectedEtudiants.length === 0 ? '1 ou 2 étudiants' : selectedEtudiants.length === 1 ? '1 étudiant (Monôme)' : '2 étudiants (Binôme)'}
@@ -273,7 +211,7 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
                       etudiant.cin.toLowerCase().includes(searchLower)
                     );
                   })
-                  .slice(0, 10) // Limiter à 10 résultats
+                  .slice(0, 10)
                   .map((etudiant) => {
                     const sid = Number(etudiant.idEtudiant);
                     const dejaSelectionne = selectedEtudiants.some((x) => Number(x) === sid);
@@ -340,6 +278,70 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
               {selectedEtudiants.length > 2 && '❌ Maximum 2 étudiants autorisés'}
             </div>
           </div>
+
+          <div className="form-row">
+            <label>Sujet</label>
+            <textarea
+              value={sujet}
+              onChange={(e) => setSujet(e.target.value)}
+              rows={3}
+              required
+            />
+          </div>
+
+          <div className="form-row">
+            <label>Durée (en mois)</label>
+            <input
+              type="number"
+              value={duree}
+              min="1"
+              placeholder="Ex: 6"
+              onChange={(e) => setDuree(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="form-row">
+            <label>Lieu de stage</label>
+            <input
+              type="text"
+              value={lieu_stage}
+              placeholder="Entreprise ou lieu"
+              onChange={(e) => setLieu_stage(e.target.value)}
+            />
+          </div>
+
+          <div className="form-row">
+            <label>Spécialité</label>
+            <select
+              value={specialite}
+              onChange={(e) => setSpecialite(e.target.value)}
+              required
+            >
+              <option value="">Sélectionner une spécialité</option>
+              {specialites
+                .filter(spec => !licence || String(spec.licence) === String(licence))
+                .map((spec) => (
+                <option key={spec.id} value={spec.nom}>
+                  {spec.nom}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-row">
+            <label>Encadrant (Optionnel)</label>
+            <select value={encadrant} onChange={(e) => setEncadrant(e.target.value)}>
+              <option value="">Sélectionner un encadrant</option>
+              {enseignants.map((enseignant) => (
+                <option key={enseignant.matricule} value={enseignant.id ?? enseignant.matricule}>
+                  {enseignant.nom} {enseignant.prenom} ({enseignant.matricule})
+                </option>
+              ))}
+            </select>
+          </div>
+
+
 
           <div className="form-row" style={{ marginTop: '16px' }}>
             <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center' }}>
