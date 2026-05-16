@@ -6,13 +6,21 @@ from .models import PFE, Soutenance
 
 
 def get_plafond_groupes_pfe(enseignant=None) -> int:
-    """Plafond individuel défini par l'enseignant."""
-    if enseignant and hasattr(enseignant, 'plafond_pfe'):
-        return max(1, min(99, getattr(enseignant, 'plafond_pfe', 5)))
-    return 5
+    """Plafond individuel défini par l'enseignant, ou global par défaut."""
+    if enseignant and getattr(enseignant, 'plafond_pfe', None) is not None:
+        return max(1, min(99, getattr(enseignant, 'plafond_pfe')))
+    
+    from .models import ParametresPfe
+    p = ParametresPfe.objects.filter(pk=1).first()
+    if p is None:
+        return 5
+    try:
+        return max(1, min(99, int(p.plafond_groupes)))
+    except (TypeError, ValueError):
+        return 5
 
 def max_groupes_plafond(enseignant=None) -> int:
-    """Le plafond dépend désormais de chaque enseignant."""
+    """Le plafond dépend de chaque enseignant ou du paramètre global."""
     return get_plafond_groupes_pfe(enseignant)
 
 

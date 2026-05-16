@@ -22,8 +22,8 @@ class Enseignant(models.Model):
     dateRecrutement = models.DateField()
     statutAdministratif = models.CharField(max_length=100, blank=True, null=True)
     plafond_pfe = models.PositiveSmallIntegerField(
-        default=5,
-        help_text='Nombre maximal d\'étudiants/groupes que cet enseignant souhaite encadrer.'
+        null=True, blank=True,
+        help_text='Capacité individuelle (laisser vide pour utiliser le plafond global).'
     )
 
     def __str__(self):
