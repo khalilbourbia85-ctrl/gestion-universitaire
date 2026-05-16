@@ -11,8 +11,13 @@ from enseignants.models import Enseignant, Permanent, Vacataire
 from enseignants.contract_rules import get_enseignant_contract_type_label
 from etudiants.models import Etudiant
 from .charge_balance import count_pfe_encadrant, count_soutenance_rapporteur
-from .models import ParametresPfe, Rapporteur, PFE, Soutenance
-from .serializers import RapporteurSerializer, PFESerializer, SoutenanceSerializer
+from .models import ParametresPfe, Rapporteur, PFE, Soutenance, Salle
+from .serializers import RapporteurSerializer, PFESerializer, SoutenanceSerializer, SalleSerializer
+
+
+class SalleViewSet(viewsets.ModelViewSet):
+    queryset = Salle.objects.all()
+    serializer_class = SalleSerializer
 
 
 def normalize_header(value):

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { SALLES_SOUTENANCE, SALLES_SOUTENANCE_SET } from '../constants/sallesSoutenance';
 
 function pickRandomMatriculeFromList(list) {
   if (!Array.isArray(list) || list.length === 0) return '';
@@ -33,9 +32,10 @@ function parseTime(timeStr) {
   return 0;
 }
 
-function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, pfes, onCancel, onSubmit }) {
+function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, pfes, sallesList = [], onCancel, onSubmit }) {
   const [dateSoutenance, setDateSoutenance] = useState('');
   const [heureSoutenance, setHeureSoutenance] = useState('09:00');
+  const [typeSoutenance, setTypeSoutenance] = useState('finale');
   const [duree, setDuree] = useState('');
   const [salle, setSalle] = useState('');
   const [encadrant, setEncadrant] = useState('');
@@ -47,6 +47,8 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
   const [errorMessage, setErrorMessage] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
   const [filteredEtudiants, setFilteredEtudiants] = useState([]);
+  const [resultatTechnique, setResultatTechnique] = useState('');
+  const [resultatFinale, setResultatFinale] = useState('');
 
   /** Enseignants pouvant être rapporteurs : pas l'encadrant ; pas contrat doctorant ni docteur. */
   const rapporteursEligibles = useMemo(() => {
@@ -67,8 +69,9 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
   }, [rapporteur, rapporteursEligibles]);
 
   const availableSalles = useMemo(() => {
+    const allSallesNoms = sallesList.map(s => s.nom);
     if (!dateSoutenance || !heureSoutenance || !duree) {
-      return SALLES_SOUTENANCE;
+      return allSallesNoms;
     }
     
     const startMins = parseTime(heureSoutenance);
@@ -92,13 +95,14 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
       }
     });
     
-    return SALLES_SOUTENANCE.filter(salle => !conflictingSalles.has(salle));
-  }, [soutenances, soutenance, dateSoutenance, heureSoutenance, duree]);
+    return allSallesNoms.filter(salle => !conflictingSalles.has(salle));
+  }, [soutenances, soutenance, dateSoutenance, heureSoutenance, duree, sallesList]);
 
   useEffect(() => {
     if (soutenance) {
       setDateSoutenance(soutenance.date_soutenance || '');
       setHeureSoutenance(timeForInput(soutenance.heure_soutenance));
+      setTypeSoutenance(soutenance.type_soutenance || 'finale');
       setDuree(soutenance.duree || '');
       setSalle(soutenance.salle || '');
       setEncadrant(soutenance.encadrant || '');
@@ -112,9 +116,12 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
               .filter((id) => Number.isFinite(id))
           : []
       );
+      setResultatTechnique(soutenance.resultat_technique || '');
+      setResultatFinale(soutenance.resultat_finale || '');
     } else {
       setDateSoutenance('');
       setHeureSoutenance('09:00');
+      setTypeSoutenance('finale');
       setDuree('');
       setSalle('');
       setEncadrant('');
@@ -122,6 +129,8 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
       setRapporteurMode('manual');
       setPfe('');
       setSelectedEtudiants([]);
+      setResultatTechnique('');
+      setResultatFinale('');
     }
     setStudentSearch('');
     setErrorMessage('');
@@ -197,13 +206,19 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
       return;
     }
 
-    if (!dateSoutenance || !heureSoutenance || !duree || !salle || !encadrant || !finalRapporteur) {
+    if (!dateSoutenance || !heureSoutenance || !salle || !encadrant || !finalRapporteur) {
       setErrorMessage('Veuillez remplir tous les champs obligatoires.');
       return;
     }
 
-    if (!SALLES_SOUTENANCE_SET.has(String(salle).trim())) {
-      setErrorMessage('Choisissez une salle parmi la liste officielle.');
+    if (typeSoutenance === 'finale' && !duree) {
+      setErrorMessage('La durée est obligatoire pour une soutenance finale.');
+      return;
+    }
+
+    const sallesSet = new Set(sallesList.map(s => String(s.nom).trim()));
+    if (!sallesSet.has(String(salle).trim())) {
+      setErrorMessage('Choisissez une salle parmi la liste.');
       return;
     }
 
@@ -225,9 +240,10 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
       .filter((id) => Number.isFinite(id));
 
     const payload = {
+      type_soutenance: typeSoutenance,
       date_soutenance: dateSoutenance,
       heure_soutenance: heureSoutenance,
-      duree: Number(duree),
+      duree: duree ? Number(duree) : null,
       salle: salle.trim(),
       encadrant,
       rapporteur: finalRapporteur,
@@ -236,6 +252,8 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
           ? Number(pfe)
           : null,
       etudiants: etudiantsPayload,
+      resultat_technique: resultatTechnique.trim(),
+      resultat_finale: resultatFinale.trim(),
     };
     if (soutenance?.idSoutenance != null) {
       payload.idSoutenance = soutenance.idSoutenance;
@@ -323,15 +341,32 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
           </div>
 
           <div className="form-row">
-            <label>Durée (minutes)</label>
-            <input
-              type="number"
-              value={duree}
-              min="1"
-              onChange={(e) => setDuree(e.target.value)}
+            <label>Type de soutenance</label>
+            <select
+              value={typeSoutenance}
+              onChange={(e) => {
+                setTypeSoutenance(e.target.value);
+                if (e.target.value === 'technique') setDuree('');
+              }}
               required
-            />
+            >
+              <option value="finale">Soutenance Finale</option>
+              <option value="technique">Soutenance Technique</option>
+            </select>
           </div>
+
+          {typeSoutenance === 'finale' && (
+            <div className="form-row">
+              <label>Durée (minutes) *</label>
+              <input
+                type="number"
+                value={duree}
+                min="1"
+                onChange={(e) => setDuree(e.target.value)}
+                required
+              />
+            </div>
+          )}
 
           <div className="form-row">
             <label>Salle</label>
@@ -342,7 +377,7 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
             >
               <option value="">Sélectionner une salle</option>
               {salle &&
-                !SALLES_SOUTENANCE_SET.has(String(salle).trim()) && (
+                !sallesList.some(s => String(s.nom).trim() === String(salle).trim()) && (
                   <option value={String(salle).trim()}>
                     {String(salle).trim()} (valeur actuelle — non répertoriée)
                   </option>
@@ -529,6 +564,29 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
               {selectedEtudiants.length >= 1 && `✓ ${selectedEtudiants.length} étudiant(s) sélectionné(s)`}
             </div>
           </div>
+
+          {soutenance && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div className="form-row">
+                <label>Résultat Soutenance Technique</label>
+                <input
+                  type="text"
+                  value={resultatTechnique}
+                  placeholder="Ex: Validé, Note..."
+                  onChange={(e) => setResultatTechnique(e.target.value)}
+                />
+              </div>
+              <div className="form-row">
+                <label>Résultat Soutenance Finale</label>
+                <input
+                  type="text"
+                  value={resultatFinale}
+                  placeholder="Ex: 15/20, Mention..."
+                  onChange={(e) => setResultatFinale(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="buttons-area">
             <button type="submit" className="btn">

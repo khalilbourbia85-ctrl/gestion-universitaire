@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import SoutenancesTable from '../components/SoutenancesTable';
 import SoutenanceForm from '../components/SoutenanceForm';
+import GestionSallesModal from '../components/GestionSallesModal';
 import MultiSelectDropdown from "../components/MultiSelectDropdown";
 import { parseFile } from "../utils/fileParser";
 import './GestionSoutenances.css';
@@ -11,9 +12,12 @@ function GestionSoutenances() {
   const [enseignants, setEnseignants] = useState([]);
   const [etudiants, setEtudiants] = useState([]);
   const [pfes, setPFEs] = useState([]);
+  const [salles, setSalles] = useState([]);
   const [selectedSoutenance, setSelectedSoutenance] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [showSallesModal, setShowSallesModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState('tous');
   const [filterBy, setFilterBy] = useState(['Tous les champs']);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -23,17 +27,19 @@ function GestionSoutenances() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [soutenanceRes, enseignantRes, etudiantRes, pfeRes] = await Promise.all([
+      const [soutenanceRes, enseignantRes, etudiantRes, pfeRes, sallesRes] = await Promise.all([
         axios.get('/api/soutenances/'),
         axios.get('/api/enseignants/'),
         axios.get('/api/etudiants/'),
-        axios.get('/api/pfes/')
+        axios.get('/api/pfes/'),
+        axios.get('/api/salles/')
       ]);
 
       setSoutenances(Array.isArray(soutenanceRes.data) ? soutenanceRes.data : (soutenanceRes.data?.results || []));
       setEnseignants(Array.isArray(enseignantRes.data) ? enseignantRes.data : (enseignantRes.data?.results || []));
       setEtudiants(Array.isArray(etudiantRes.data) ? etudiantRes.data : (etudiantRes.data?.results || []));
       setPFEs(Array.isArray(pfeRes.data) ? pfeRes.data : (pfeRes.data?.results || []));
+      setSalles(Array.isArray(sallesRes.data) ? sallesRes.data : (sallesRes.data?.results || []));
       setError('');
     } catch (err) {
       const message = err.response?.data?.detail || err.message || 'Impossible de charger les données.';
@@ -48,6 +54,8 @@ function GestionSoutenances() {
   }, []);
 
   const filteredSoutenances = soutenances.filter((s) => {
+    if (typeFilter !== 'tous' && s.type_soutenance !== typeFilter) return false;
+
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
     
@@ -69,6 +77,8 @@ function GestionSoutenances() {
         switch (field) {
           case "ID Soutenance":
             return String(s?.idSoutenance || '').toLowerCase().includes(term);
+          case "Type":
+            return String(s?.type_soutenance || '').toLowerCase().includes(term);
           case "Date":
             return String(s?.date_soutenance || '').toLowerCase().includes(term);
           case "Heure":
@@ -166,6 +176,7 @@ function GestionSoutenances() {
           if (normKey === 'idsoutenance' || normKey === 'id soutenance') finalKey = 'idSoutenance';
           if (normKey === 'date' || normKey === 'date soutenance' || normKey === 'date_soutenance') finalKey = 'date_soutenance';
           if (normKey === 'heure' || normKey === 'heure soutenance' || normKey === 'heure_soutenance') finalKey = 'heure_soutenance';
+          if (normKey === 'type' || normKey === 'type soutenance' || normKey === 'type_soutenance') finalKey = 'type_soutenance';
           
           acc[finalKey] = row[key];
           return acc;
@@ -211,26 +222,44 @@ function GestionSoutenances() {
         <div className="table-card">Chargement en cours...</div>
       ) : (
         <>
-          <div className="page-container">
-            <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
-                <MultiSelectDropdown
-                  label="Tous les champs sélectionnés"
-                  options={[
-                    "Tous les champs",
-                    "ID Soutenance",
-                    "Date",
-                    "Heure",
-                    "Salle",
-                    "Encadrant",
-                    "Type contrat (enc.)",
-                    "Rapporteur",
-                    "Type contrat (rap.)"
-                  ]}
-                  selected={filterBy}
-                  onChange={setFilterBy}
-                />
+          <div className="page-container" style={{ position: 'relative', zIndex: 100 }}>
+            <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '15px', position: 'relative', zIndex: 10 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Type :</span>
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    style={{ padding: '8px', borderRadius: '6px', border: '2px solid #e0e7ff', outline: 'none', backgroundColor: '#fff', minWidth: '180px' }}
+                  >
+                    <option value="tous">Tous les types</option>
+                    <option value="technique">Soutenance Technique</option>
+                    <option value="finale">Soutenance Finale</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', minWidth: '250px' }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569', whiteSpace: 'nowrap' }}>Afficher/Chercher :</span>
+                  <div style={{ flex: 1 }}>
+                    <MultiSelectDropdown
+                      label="Tous les champs sélectionnés"
+                      options={[
+                        "Tous les champs",
+                        "ID Soutenance",
+                        "Type",
+                        "Date",
+                        "Heure",
+                        "Salle",
+                        "Encadrant",
+                        "Type contrat (enc.)",
+                        "Rapporteur",
+                        "Type contrat (rap.)"
+                      ]}
+                      selected={filterBy}
+                      onChange={setFilterBy}
+                    />
+                  </div>
+                </div>
               </div>
 
               <input
@@ -243,6 +272,12 @@ function GestionSoutenances() {
             </div>
 
             <div className="buttons-area">
+              <button
+                className="btn import-btn"
+                onClick={() => setShowSallesModal(true)}
+              >
+                Gérer les salles
+              </button>
               <button
                 className="btn import-btn"
                 onClick={handleImportClick}
@@ -282,8 +317,18 @@ function GestionSoutenances() {
           enseignants={enseignants}
           etudiants={etudiants}
           pfes={pfes}
+          sallesList={salles}
           onCancel={handleCloseForm}
           onSubmit={handleSaveSoutenance}
+        />
+      )}
+
+      {showSallesModal && (
+        <GestionSallesModal
+          onClose={() => setShowSallesModal(false)}
+          onSallesChange={() => {
+            loadData();
+          }}
         />
       )}
     </div>

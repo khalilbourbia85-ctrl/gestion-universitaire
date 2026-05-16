@@ -25,6 +25,18 @@ class ParametresPfe(models.Model):
         return f'Paramètres PFE (plafond {self.plafond_groupes} groupes)'
 
 
+class Salle(models.Model):
+    nom = models.CharField(max_length=50, unique=True)
+
+    class Meta:
+        verbose_name = 'Salle'
+        verbose_name_plural = 'Salles'
+        ordering = ['nom']
+
+    def __str__(self):
+        return self.nom
+
+
 class Rapporteur(models.Model):
     matricule = models.CharField(max_length=20, primary_key=True)
     cin = models.CharField(max_length=8, unique=True)
@@ -62,8 +74,6 @@ class PFE(models.Model):
     lieu_stage = models.CharField(max_length=200, null=True, blank=True)
     convention_file = models.FileField(upload_to='conventions/', null=True, blank=True)
     lettre_affectation_file = models.FileField(upload_to='lettres_affectation/', null=True, blank=True)
-    resultat_soutenance_technique = models.CharField(max_length=100, null=True, blank=True, help_text="Résultat d'évaluation de Soutenance technique")
-    resultat_soutenance_finale = models.CharField(max_length=100, null=True, blank=True, help_text="Résultat d'évaluation de Soutenance finale")
 
     def __str__(self):
         return f"PFE {self.idPfe} - {self.sujet[:40]}"
@@ -126,6 +136,8 @@ class Soutenance(models.Model):
         Etudiant,
         related_name='soutenances'
     )
+    resultat_technique = models.CharField(max_length=100, null=True, blank=True, help_text="Résultat d'évaluation de Soutenance technique")
+    resultat_finale = models.CharField(max_length=100, null=True, blank=True, help_text="Résultat d'évaluation de Soutenance finale")
 
     def __str__(self):
         return f"Soutenance {self.idSoutenance} - {self.date_soutenance}"

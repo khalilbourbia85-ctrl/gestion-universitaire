@@ -14,9 +14,14 @@ from .charge_balance import (
     pfe_total_after_save,
     soutenance_total_after_save,
 )
-from .models import Rapporteur, PFE, Soutenance
+from .models import Rapporteur, PFE, Soutenance, Salle
 from .salles_soutenance import SALLES_SOUTENANCE
 
+
+class SalleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Salle
+        fields = ['id', 'nom']
 
 class RapporteurSerializer(serializers.ModelSerializer):
     def validate_cin(self, value):
@@ -82,8 +87,6 @@ class PFESerializer(serializers.ModelSerializer):
             'lieu_stage',
             'convention_file',
             'lettre_affectation_file',
-            'resultat_soutenance_technique',
-            'resultat_soutenance_finale',
         ]
 
     def validate_etudiants(self, value):
@@ -197,14 +200,16 @@ class SoutenanceSerializer(serializers.ModelSerializer):
             'rapporteur_detail',
             'etudiants',
             'etudiants_detail',
+            'resultat_technique',
+            'resultat_finale',
         ]
         read_only_fields = ['idSoutenance']
 
     def validate_salle(self, value):
         v = (value or '').strip()
-        if v not in SALLES_SOUTENANCE:
+        if not Salle.objects.filter(nom__iexact=v).exists():
             raise serializers.ValidationError(
-                'Choisissez une salle parmi la liste officielle des salles de soutenance.'
+                'Cette salle n\'existe pas dans la base de données.'
             )
         return v
 
