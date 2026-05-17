@@ -16,6 +16,7 @@ function SoutenancesTable({ soutenances, onEdit, onDelete, filterBy = ['Tous les
       <thead>
         <tr>
           <th>ID</th>
+          {showField('Type') && <th>Type</th>}
           {showField('Date') && <th>Date</th>}
           {showField('Heure') && <th>Heure</th>}
           {filterBy.includes('Tous les champs') && <th>Durée (min)</th>}
@@ -25,6 +26,8 @@ function SoutenancesTable({ soutenances, onEdit, onDelete, filterBy = ['Tous les
           {showField('Rapporteur') && <th>Rapporteur</th>}
           {showField('Type contrat (rap.)') && <th>Type contrat (rap.)</th>}
           {filterBy.includes('Tous les champs') && <th>Étudiants</th>}
+          {filterBy.includes('Tous les champs') && <th>Rés. Tech.</th>}
+          {filterBy.includes('Tous les champs') && <th>Rés. Fin.</th>}
           <th>Actions</th>
         </tr>
       </thead>
@@ -37,9 +40,10 @@ function SoutenancesTable({ soutenances, onEdit, onDelete, filterBy = ['Tous les
           safeSoutenances.map((soutenance) => (
             <tr key={soutenance.idSoutenance}>
               <td>{soutenance.idSoutenance}</td>
+              {showField('Type') && <td>{soutenance.type_soutenance === 'technique' ? 'Technique' : 'Finale'}</td>}
               {showField('Date') && <td>{new Date(soutenance.date_soutenance).toLocaleDateString('fr-FR')}</td>}
               {showField('Heure') && <td>{formatHeureApi(soutenance.heure_soutenance)}</td>}
-              {filterBy.includes('Tous les champs') && <td>{soutenance.duree}</td>}
+              {filterBy.includes('Tous les champs') && <td>{soutenance.duree ? soutenance.duree : '—'}</td>}
               {showField('Salle') && <td>{soutenance.salle}</td>}
               {showField('Encadrant') && <td>
                 {soutenance.encadrant_detail
@@ -58,6 +62,8 @@ function SoutenancesTable({ soutenances, onEdit, onDelete, filterBy = ['Tous les
                   ? soutenance.etudiants_detail.map((e) => `${e.nom} ${e.prenom}`).join(', ')
                   : soutenance.etudiants.join(', ')}
               </td>}
+              {filterBy.includes('Tous les champs') && <td>{soutenance.resultat_technique || '—'}</td>}
+              {filterBy.includes('Tous les champs') && <td>{soutenance.resultat_finale || '—'}</td>}
               <td>
                 <span className="icon edit-icon" onClick={() => onEdit(soutenance)}>
                   ✏️

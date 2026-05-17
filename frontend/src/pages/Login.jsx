@@ -11,8 +11,8 @@ export default function Login({ onLogin }) {
     e.preventDefault();
     try {
       const res = await axios.post('/api-token-auth/', { username, password });
-      // localStorage.setItem('token', res.data.token);
-      // localStorage.setItem('role', res.data.role);
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('role', res.data.role);
       axios.defaults.headers.common['Authorization'] = `Token ${res.data.token}`;
       setSuccess('Connexion réussie ! Bienvenue...');
       setError('');

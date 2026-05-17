@@ -157,6 +157,7 @@ function GestionEtudiants() {
     situation_s5: item.situation_s5 && item.situation_s5.toUpperCase().startsWith('R') ? 'R' : 'N',
     situation_pfe: item.situation_pfe && item.situation_pfe.toUpperCase().startsWith('R') ? 'R' : 'N',
     annee_universitaire: anneeUniversitaire,
+    genre: item.genre === 'F' ? 'F' : 'M',
   });
 
   const normalizeHeader = (header) =>
@@ -376,6 +377,7 @@ function GestionEtudiants() {
           case "CIN": return e.cin.toLowerCase().includes(term);
           case "Nom": return e.nom.toLowerCase().includes(term);
           case "Prénom": return e.prenom.toLowerCase().includes(term);
+          case "Genre": return (e.genre === 'F' ? 'femme' : 'homme').includes(term);
           case "Email": return e.email.toLowerCase().includes(term);
           case "Téléphone": return String(e.numTel || "").toLowerCase().includes(term);
           case "Nationalité": return String(e.nationalite || "").toLowerCase().includes(term);
@@ -443,7 +445,7 @@ function GestionEtudiants() {
             <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
             <MultiSelectDropdown
               label="Tous les champs sélectionnés"
-              options={["Tous les champs", "Matricule", "CIN", "Nom", "Prénom", "Email", "Téléphone", "Nationalité", "Licence", "Spécialité", "Groupe", "Situation"]}
+              options={["Tous les champs", "Matricule", "CIN", "Nom", "Prénom", "Genre", "Email", "Téléphone", "Nationalité", "Licence", "Spécialité", "Groupe", "Situation"]}
               selected={filterBy}
               onChange={setFilterBy}
             />

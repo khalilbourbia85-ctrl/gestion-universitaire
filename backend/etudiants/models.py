@@ -13,6 +13,16 @@ class Etudiant(models.Model):
     numTel = models.CharField(max_length=20)
     dateNaissance = models.DateField()
     adresse = models.CharField(max_length=100)
+    
+    GENRE_CHOICES = [
+        ('M', 'Masculin'),
+        ('F', 'Féminin'),
+    ]
+    genre = models.CharField(
+        max_length=1,
+        choices=GENRE_CHOICES,
+        default='M'
+    )
 
     SITUATION_CHOICES = [
         ('N', 'Nouveau'),

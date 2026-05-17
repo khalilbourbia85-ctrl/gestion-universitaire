@@ -226,17 +226,52 @@ function GestionSoutenances() {
             <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '15px', position: 'relative', zIndex: 10 }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Type :</span>
-                  <select
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
-                    style={{ padding: '8px', borderRadius: '6px', border: '2px solid #e0e7ff', outline: 'none', backgroundColor: '#fff', minWidth: '180px' }}
-                  >
-                    <option value="tous">Tous les types</option>
-                    <option value="technique">Soutenance Technique</option>
-                    <option value="finale">Soutenance Finale</option>
-                  </select>
-                </div>
+                  <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569', whiteSpace: 'nowrap' }}>Type de soutenance :</span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('tous')}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: typeFilter === 'tous' ? '#2563eb' : '#fff',
+                    color: typeFilter === 'tous' ? '#fff' : '#0f172a',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Toutes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('technique')}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: typeFilter === 'technique' ? '#2563eb' : '#fff',
+                    color: typeFilter === 'technique' ? '#fff' : '#0f172a',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Soutenances Technique
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('finale')}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: typeFilter === 'finale' ? '#2563eb' : '#fff',
+                    color: typeFilter === 'finale' ? '#fff' : '#0f172a',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Soutenances Finale
+                </button>
+              </div>
+            </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', minWidth: '250px' }}>
                   <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569', whiteSpace: 'nowrap' }}>Afficher/Chercher :</span>

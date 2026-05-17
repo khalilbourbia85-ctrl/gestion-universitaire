@@ -12,29 +12,42 @@ import {
   FaUniversity,
   FaBook,
   FaPencilAlt,
-  FaChartPie
+  FaChartBar
 } from "react-icons/fa";
 
 import { NavLink, useLocation } from "react-router-dom";
 
-function Sidebar({ role }) {
+function Sidebar() {
   const location = useLocation();
   const pfeRoutes = ["/pfes", "/encadrants", "/rapporteurs", "/soutenances"];
   const isPfeSectionActive = pfeRoutes.includes(location.pathname);
   const [pfeOpen, setPfeOpen] = useState(false);
   
-  const academicRoutes = ["/departements", "/licences", "/modules"];
+  const academicRoutes = ["/departements", "/licences", "/modules", "/affectations"];
   const isAcademicSectionActive = academicRoutes.includes(location.pathname);
   const [academicOpen, setAcademicOpen] = useState(false);
 
-  const dashboardRoutes = ["/dashboard", "/dashboard-pfe"];
-  const isDashboardSectionActive = dashboardRoutes.includes(location.pathname);
-  const [dashboardOpen, setDashboardOpen] = useState(false);
+  useEffect(() => {
+    if (isPfeSectionActive) {
+      setPfeOpen(true);
+    }
+  }, [isPfeSectionActive]);
+
+  useEffect(() => {
+    if (isAcademicSectionActive) {
+      setAcademicOpen(true);
+    }
+  }, [isAcademicSectionActive]);
 
   return (
     <div className="sidebar">
       <div className="logo">
-        <h2 className="logo-app">🎓 UniManage</h2>
+        <img
+          src="/isg-sousse-logo.png"
+          alt="Institut Supérieur de Gestion de Sousse"
+          className="logo-institution"
+        />
+        <h2 className="logo-app">🎓 UniDepart</h2>
       </div>
       <nav>
         <ul>
@@ -131,19 +144,17 @@ function Sidebar({ role }) {
               <FaChevronDown className={`chevron ${academicOpen ? "open" : ""}`} />
             </button>
             <ul className={`submenu ${academicOpen ? "open" : ""}`}>
-              {role === 'admin' && (
-                <li>
-                  <NavLink
-                    to="/departements"
-                    className={({ isActive }) =>
-                      isActive ? "active-link" : ""
-                    }
-                  >
-                    <FaUniversity />
-                    Gestion Départements
-                  </NavLink>
-                </li>
-              )}
+              <li>
+                <NavLink
+                  to="/departements"
+                  className={({ isActive }) =>
+                    isActive ? "active-link" : ""
+                  }
+                >
+                  <FaUniversity />
+                  Gestion Départements
+                </NavLink>
+              </li>
               <li>
                 <NavLink
                   to="/licences"
@@ -166,42 +177,30 @@ function Sidebar({ role }) {
                   Gestion Modules
                 </NavLink>
               </li>
+              <li>
+                <NavLink
+                  to="/affectations"
+                  className={({ isActive }) =>
+                    isActive ? "active-link" : ""
+                  }
+                >
+                  <FaProjectDiagram />
+                  Affectations Académiques
+                </NavLink>
+              </li>
             </ul>
           </li>
-          <li className={`menu-header ${isDashboardSectionActive ? "active" : ""}`}>
-            <button
-              type="button"
-              className="menu-button"
-              onClick={() => setDashboardOpen((prev) => !prev)}
+
+          <li>
+            <NavLink
+              to="/dashboard"
+              className={({ isActive }) =>
+                isActive ? "active-link" : ""
+              }
             >
-              <FaChartPie />
-              Tableaux de Bord
-              <FaChevronDown className={`chevron ${dashboardOpen ? "open" : ""}`} />
-            </button>
-            <ul className={`submenu ${dashboardOpen ? "open" : ""}`}>
-              <li>
-                <NavLink
-                  to="/dashboard"
-                  className={({ isActive }) =>
-                    isActive ? "active-link" : ""
-                  }
-                >
-                  <FaChartPie />
-                  Global
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/dashboard-pfe"
-                  className={({ isActive }) =>
-                    isActive ? "active-link" : ""
-                  }
-                >
-                  <FaChartPie />
-                  PFE
-                </NavLink>
-              </li>
-            </ul>
+              <FaChartBar />
+              Tableau de Bord
+            </NavLink>
           </li>
         </ul>
       </nav>

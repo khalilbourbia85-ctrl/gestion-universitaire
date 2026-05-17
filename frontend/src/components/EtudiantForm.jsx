@@ -19,6 +19,7 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
     situation_pfe: "N",
     licence: "",
     specialite: "",
+    genre: "M",
   });
 
   useEffect(() => {
@@ -52,6 +53,7 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
             : selected.specialite_detail?.id != null
               ? String(selected.specialite_detail.id)
               : "",
+        genre: selected.genre || "M",
       });
   
     } else {
@@ -72,6 +74,7 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
         situation_pfe: "N",
         licence: "",
         specialite: "",
+        genre: "M",
       });
   
     }
@@ -97,6 +100,7 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
     situation_s5: data.situation_s5 || "N",
     situation_pfe: data.situation_pfe || "N",
     dateNaissance: String(data.dateNaissance || "").trim(),
+    genre: data.genre || "M",
     licence:
       data.licence === "" || data.licence == null || data.licence === undefined
         ? null
@@ -267,6 +271,14 @@ value={form.prenom}
 onChange={handleChange}
 required
 />
+        </div>
+
+        <div className="input-group">
+          <label>Genre</label>
+          <select name="genre" value={form.genre} onChange={handleChange}>
+            <option value="M">Homme</option>
+            <option value="F">Femme</option>
+          </select>
         </div>
 
         <div className="input-group">

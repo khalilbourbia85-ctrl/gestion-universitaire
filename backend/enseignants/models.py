@@ -25,6 +25,10 @@ class Enseignant(models.Model):
         null=True, blank=True,
         help_text='Capacité individuelle (laisser vide pour utiliser le plafond global).'
     )
+    plafond_enseignement = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Plafond d'heures d'enseignement (cours/TD/TP)."
+    )
 
     def __str__(self):
         return f"{self.nom} {self.prenom}"

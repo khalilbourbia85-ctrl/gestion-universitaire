@@ -2,8 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import axios from 'axios';
 import PFEsTable from '../components/PFEsTable';
 import PFEForm from '../components/PFEForm';
-import MultiSelectDropdown from "../components/MultiSelectDropdown";
-import { parseFile } from "../utils/fileParser";
+import AffectationKanban from '../components/AffectationKanban';
 import './GestionEtudiants.css';
 
 class ErrorBoundary extends React.Component {
@@ -24,7 +23,7 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <div className="main-container">
-          <h2 className="page-title">Erreur dans Affectation PFE</h2>
+          <h2 className="page-title">Erreur dans Gestion des PFE</h2>
           <div className="success-message" style={{ background: '#e53e3e' }}>
             Une erreur s'est produite: {this.state.error?.message}
           </div>
@@ -58,59 +57,75 @@ function GestionPFEs() {
   const [selectedPFE, setSelectedPFE] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterBy, setFilterBy] = useState(['Tous les champs']);
+  const [filterBy, setFilterBy] = useState('Tous les champs');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const pfeFileRef = useRef(null);
+  const [activeTab, setActiveTab] = useState('liste');
+  /** Plafond global (tous les encadrants) — même valeur que sur le serveur après chargement / enregistrement. */
   const [plafondGroupes, setPlafondGroupes] = useState(5);
   const lastSavedPlafondRef = useRef(5);
   const [savingPlafond, setSavingPlafond] = useState(false);
+  
+  const [myPlafond, setMyPlafond] = useState('');
+  const [savingMyPlafond, setSavingMyPlafond] = useState(false);
+  
+  const pfeFileRef = useRef(null);
+
+  const role = localStorage.getItem('role');
 
   const getEncadrantMaxGroupes = useCallback(
-    (_matriculeOrEnseignant) => {
-      const ens = typeof _matriculeOrEnseignant === 'object' ? _matriculeOrEnseignant : enseignants.find(e => e.matricule === _matriculeOrEnseignant);
-      if (ens && ens.plafond_pfe !== undefined && ens.plafond_pfe !== null && ens.plafond_pfe !== "") {
+    (matriculeOrEnseignant) => {
+      const ens =
+        typeof matriculeOrEnseignant === 'object'
+          ? matriculeOrEnseignant
+          : enseignants.find((e) => e.matricule === matriculeOrEnseignant);
+
+      if (ens && ens.plafond_pfe != null && ens.plafond_pfe !== '') {
         return clampPlafondInput(ens.plafond_pfe);
       }
       return clampPlafondInput(plafondGroupes);
     },
-    [enseignants, plafondGroupes]
+    [plafondGroupes, enseignants]
   );
 
   const loadData = async () => {
     setLoading(true);
     setError('');
     try {
-      const [pfeRes, enseignantRes, etudiantRes, paramRes, specRes] = await Promise.all([
+      const [pfeRes, enseignantRes, etudiantRes, specRes, paramRes] = await Promise.all([
         axios.get('/api/pfes/'),
         axios.get('/api/enseignants/'),
         axios.get('/api/etudiants/'),
+        axios.get('/api/specialites/'),
         axios.get('/api/pfes/parametres/').catch(() => ({ data: { plafond_groupes: 5 } })),
-        axios.get('/api/specialites/').catch(() => ({ data: [] })),
       ]);
 
-      setPFEs(Array.isArray(pfeRes.data) ? pfeRes.data : (pfeRes.data?.results || []));
-      const ensRaw = Array.isArray(enseignantRes.data) ? enseignantRes.data : (enseignantRes.data?.results || []);
+      setPFEs(Array.isArray(pfeRes.data) ? pfeRes.data : []);
+      const ensRaw = Array.isArray(enseignantRes.data) ? enseignantRes.data : [];
       setEnseignants(
         ensRaw.map((row) =>
           row && typeof row === 'object'
             ? {
-              ...row,
-              matricule:
-                row.matricule != null && typeof row.matricule !== 'object'
-                  ? String(row.matricule).trim()
-                  : row.matricule,
-            }
+                ...row,
+                matricule:
+                  row.matricule != null && typeof row.matricule !== 'object'
+                    ? String(row.matricule).trim()
+                    : row.matricule,
+              }
             : row
         )
       );
-      setEtudiants(Array.isArray(etudiantRes.data) ? etudiantRes.data : (etudiantRes.data?.results || []));
-      setSpecialites(Array.isArray(specRes.data) ? specRes.data : (specRes.data?.results || []));
+      setEtudiants(Array.isArray(etudiantRes.data) ? etudiantRes.data : []);
+      setSpecialites(Array.isArray(specRes.data) ? specRes.data : []);
       const pg = clampPlafondInput(paramRes?.data?.plafond_groupes ?? 5);
       setPlafondGroupes(pg);
       lastSavedPlafondRef.current = pg;
-      setSpecialites(Array.isArray(specRes.data) ? specRes.data : (specRes.data?.results || []));
+
+      if (role === 'enseignant' && ensRaw.length === 1) {
+        const p = ensRaw[0]?.plafond_pfe;
+        setMyPlafond(p != null ? String(p) : '');
+      }
     } catch (err) {
       const message = err.response?.data?.detail || err.message || 'Impossible de charger les données. Vérifiez que le backend est disponible.';
       setError(message);
@@ -157,72 +172,35 @@ function GestionPFEs() {
     };
   };
 
-  const getEtudiantStats = () => {
-    const assignedIds = new Set();
-    (pfes || []).forEach(p => {
-      if (Array.isArray(p.etudiants_detail)) {
-        p.etudiants_detail.forEach(e => {
-          const id = e.idEtudiant || e.id;
-          if (id != null) assignedIds.add(String(id));
-        });
-      } else if (Array.isArray(p.etudiants)) {
-        p.etudiants.forEach(e => {
-          const id = typeof e === 'object' ? (e.idEtudiant || e.id) : e;
-          if (id != null) assignedIds.add(String(id));
-        });
-      }
-    });
-
-    const affectes = [];
-    const nonAffectes = [];
-
-    (etudiants || []).forEach(e => {
-      const idStr = String(e.idEtudiant || e.id);
-      if (assignedIds.has(idStr)) {
-        affectes.push(e);
-      } else {
-        nonAffectes.push(e);
-      }
-    });
-
-    return { affectes, nonAffectes };
-  };
-
   const safePFEs = Array.isArray(pfes) ? pfes : [];
   const filteredPFEs = safePFEs.filter((item) => {
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
 
-    if (filterBy.includes('Tous les champs')) {
-      return (
-        String(item?.idPfe || '').toLowerCase().includes(term) ||
-        String(item?.sujet || '').toLowerCase().includes(term) ||
-        String(item?.specialite || '').toLowerCase().includes(term) ||
-        String(item?.lieu_stage || '').toLowerCase().includes(term) ||
-        String(item?.encadrant_detail?.nom || '').toLowerCase().includes(term) ||
-        String(item?.encadrant_detail?.prenom || '').toLowerCase().includes(term) ||
-        String(item?.encadrant_detail?.typeContrat || '').toLowerCase().includes(term)
-      );
-    } else {
-      return filterBy.some(field => {
-        switch (field) {
-          case 'ID PFE':
-            return String(item?.idPfe || '').toLowerCase().includes(term);
-          case 'Sujet':
-            return String(item?.sujet || '').toLowerCase().includes(term);
-          case 'Spécialité':
-            return String(item?.specialite || '').toLowerCase().includes(term);
-          case 'Lieu de stage':
-            return String(item?.lieu_stage || '').toLowerCase().includes(term);
-          case 'Encadrant':
-            return String(item?.encadrant_detail?.nom || '').toLowerCase().includes(term) ||
-              String(item?.encadrant_detail?.prenom || '').toLowerCase().includes(term);
-          case 'Type contrat enc.':
-            return String(item?.encadrant_detail?.typeContrat || '').toLowerCase().includes(term);
-          default:
-            return false;
-        }
-      });
+    switch (filterBy) {
+      case 'ID PFE':
+        return String(item?.idPfe || '').toLowerCase().includes(term);
+      case 'Sujet':
+        return String(item?.sujet || '').toLowerCase().includes(term);
+      case 'Type de projet':
+        return String(item?.type_projet || '').toLowerCase().includes(term);
+      case 'Spécialité':
+        return String(item?.specialite || '').toLowerCase().includes(term);
+      case 'Encadrant':
+        return String(item?.encadrant_detail?.nom || '').toLowerCase().includes(term) ||
+          String(item?.encadrant_detail?.prenom || '').toLowerCase().includes(term);
+      case 'Type contrat enc.':
+        return String(item?.encadrant_detail?.typeContrat || '').toLowerCase().includes(term);
+      default:
+        return (
+          String(item?.idPfe || '').toLowerCase().includes(term) ||
+          String(item?.sujet || '').toLowerCase().includes(term) ||
+          String(item?.type_projet || '').toLowerCase().includes(term) ||
+          String(item?.specialite || '').toLowerCase().includes(term) ||
+          String(item?.encadrant_detail?.nom || '').toLowerCase().includes(term) ||
+          String(item?.encadrant_detail?.prenom || '').toLowerCase().includes(term) ||
+          String(item?.encadrant_detail?.typeContrat || '').toLowerCase().includes(term)
+        );
     }
   });
 
@@ -243,10 +221,11 @@ function GestionPFEs() {
       const payload = {
         sujet: data.sujet,
         duree: data.duree,
-        lieu_stage: data.lieu_stage,
         specialite: data.specialite,
+        type_projet: data.typeProjet,
         encadrant: data.encadrant,
         etudiants: data.etudiants,
+        lieu_stage: data.lieu_stage,
       };
 
       if (data.idPfe) {
@@ -260,14 +239,7 @@ function GestionPFEs() {
       handleCloseForm();
       loadData();
     } catch (err) {
-      const d = err.response?.data;
-      const msg =
-        (typeof d === 'string' && d) ||
-        d?.detail ||
-        d?.errors ||
-        (d && typeof d === 'object' ? Object.values(d).flat().join(' | ') : null) ||
-        "Erreur lors de l'enregistrement.";
-      setError(msg);
+      setError(err.response?.data?.detail || err.response?.data?.errors || 'Erreur lors de l\'enregistrement.');
     }
   };
 
@@ -278,7 +250,7 @@ function GestionPFEs() {
       setMessage('PFE supprimé avec succès.');
       setPFEs((prev) => prev.filter((item) => item.idPfe !== idPfe));
     } catch (err) {
-      setError(err.response?.data?.detail || "Impossible de supprimer le PFE.");
+      setError('Impossible de supprimer le PFE.');
     }
   };
 
@@ -612,7 +584,8 @@ function GestionPFEs() {
     String(a.prenom || '').localeCompare(String(b.prenom || ''), 'fr', { sensitivity: 'base' })
   );
 
-  const plafondDirty = clampPlafondInput(plafondGroupes) !== clampPlafondInput(lastSavedPlafondRef.current);
+  const plafondDirty =
+    clampPlafondInput(plafondGroupes) !== clampPlafondInput(lastSavedPlafondRef.current);
 
   const handleSavePlafondGlobal = async () => {
     setSavingPlafond(true);
@@ -624,24 +597,37 @@ function GestionPFEs() {
       setPlafondGroupes(v);
       lastSavedPlafondRef.current = v;
       setMessage('Plafond global enregistré.');
-      setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setError("Erreur lors de l'enregistrement du plafond global.");
+      const d = err.response?.data;
+      const msg =
+        (typeof d === 'string' && d) ||
+        d?.detail ||
+        d?.plafond_groupes ||
+        (d && typeof d === 'object' ? JSON.stringify(d) : null) ||
+        "Erreur lors de l'enregistrement du plafond.";
+      setError(msg);
     } finally {
       setSavingPlafond(false);
     }
   };
 
-  const handleUpdateTeacherPlafond = async (matricule, newValue) => {
+  const handleSaveMyPlafond = async () => {
+    if (!enseignants || enseignants.length === 0) return;
+    const currentTeacher = enseignants[0];
+    
+    setSavingMyPlafond(true);
+    setError('');
+    setMessage('');
+    
     try {
-      const val = newValue === "" || newValue === null ? null : clampPlafondInput(newValue);
-      await axios.patch(`/api/enseignants/${matricule}/`, { plafond_pfe: val });
-      setEnseignants(prev => prev.map(e => e.matricule === matricule ? { ...e, plafond_pfe: val } : e));
-      setMessage(`Capacité mise à jour pour l'enseignant.`);
-      setTimeout(() => setMessage(''), 3000);
+      const val = myPlafond === '' ? null : parseInt(myPlafond, 10);
+      await axios.patch(`/api/enseignants/${currentTeacher.matricule}/`, { plafond_pfe: val });
+      setMessage("Votre capacité d'encadrement a été mise à jour.");
+      await loadData();
     } catch (err) {
-      console.error(err);
-      setError("Erreur lors de la mise à jour de la capacité d'encadrement.");
+      setError("Erreur lors de l'enregistrement de votre capacité.");
+    } finally {
+      setSavingMyPlafond(false);
     }
   };
 
@@ -649,56 +635,48 @@ function GestionPFEs() {
     pfeFileRef.current?.click();
   };
 
+  const handleAssignKanban = async (pfeId, matricule) => {
+    try {
+      const pfe = pfes.find((p) => p.idPfe === pfeId);
+      if (!pfe) return;
+
+      let studentIds = [];
+      if (Array.isArray(pfe.etudiants) && pfe.etudiants.length > 0) {
+        studentIds = pfe.etudiants.map(student =>
+          typeof student === 'object' ? (student.numEtudiant || student.idEtudiant || student.id) : student
+        );
+      }
+
+      await axios.put(`/api/pfes/${pfe.idPfe}/`, {
+        ...pfe,
+        encadrant: matricule, // null to unassign
+        etudiants: studentIds.length > 0 ? studentIds : pfe.etudiants || [],
+      });
+
+      setMessage(`PFE ${pfeId} ${matricule ? `assigné à ${matricule}` : 'désassigné'}.`);
+      setError('');
+      loadData();
+    } catch (err) {
+      setError(`Erreur lors de l'assignation du PFE ${pfeId}.`);
+    }
+  };
+
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const formData = new FormData();
+    formData.append('file', file);
+
     try {
-      const jsonData = await parseFile(file);
-
-      const normalizeHeader = (header) =>
-        String(header)
-          .trim()
-          .toLowerCase()
-          .replace(/\s+/g, " ")
-          .replace(/[^a-z0-9 ]/g, "");
-
-      const importedData = jsonData.map(row => {
-        return Object.keys(row).reduce((acc, key) => {
-          const normKey = normalizeHeader(key);
-          let finalKey = normKey;
-          if (normKey === 'sujet' || normKey === 'titre') finalKey = 'sujet';
-          if (normKey === 'specialite' || normKey === 'spécialité') finalKey = 'specialite';
-          if (normKey === 'lieustage' || normKey === 'lieu de stage') finalKey = 'lieu_stage';
-          
-          acc[finalKey] = row[key];
-          return acc;
-        }, {});
+      const response = await axios.post('/api/pfes/import-excel/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-
-      if (!Array.isArray(importedData) || !importedData.length) {
-        setError("Aucune donnée importable trouvée.");
-        return;
-      }
-
-      let successCount = 0;
-      for (const record of importedData) {
-        try {
-          if (record.etudiants && typeof record.etudiants === 'string') {
-            record.etudiants = record.etudiants.split(';').map(id => Number(id.trim())).filter(id => !isNaN(id));
-          }
-          await axios.post('/api/pfes/', record);
-          successCount++;
-        } catch (itemErr) {
-          console.error(`Erreur lors de l'import d'un PFE:`, itemErr);
-        }
-      }
-      setMessage(`${successCount} PFE(s) importé(s) avec succès.`);
+      setMessage(`Import réussi : ${response.data.created.length} PFE(s) ajoutés.`);
       setError('');
       loadData();
     } catch (err) {
-      console.error(err);
-      setError("Erreur lors de l'importation: " + (err.message || "Veuillez vérifier le format de vos données."));
+      setError(err.response?.data?.errors || err.response?.data?.detail || 'Erreur d\'import Excel.');
     } finally {
       event.target.value = null;
     }
@@ -710,17 +688,44 @@ function GestionPFEs() {
       {message && <div className="success-message">{message}</div>}
       {error && <div className="success-message" style={{ background: '#e53e3e' }}>{JSON.stringify(error)}</div>}
 
-      <div className="page-container">
-        <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#475569' }}>Afficher/Chercher :</span>
-            <MultiSelectDropdown
-              label="Tous les champs sélectionnés"
-              options={["Tous les champs", "ID PFE", "Sujet", "Lieu de stage", "Spécialité", "Encadrant", "Type contrat enc."]}
-              selected={filterBy}
-              onChange={setFilterBy}
-            />
-          </div>
+      <div className="tabs-container" style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px' }}>
+        <button
+          className={`btn ${activeTab === 'liste' ? '' : 'btn-secondary'}`}
+          style={{ backgroundColor: activeTab === 'liste' ? '#2563eb' : '#f8fafc', color: activeTab === 'liste' ? 'white' : '#475569', border: '1px solid #cbd5e1' }}
+          onClick={() => setActiveTab('liste')}
+        >
+          📋 Liste des PFE
+        </button>
+        <button
+          className={`btn ${activeTab === 'kanban' ? '' : 'btn-secondary'}`}
+          style={{ backgroundColor: activeTab === 'kanban' ? '#2563eb' : '#f8fafc', color: activeTab === 'kanban' ? 'white' : '#475569', border: '1px solid #cbd5e1' }}
+          onClick={() => setActiveTab('kanban')}
+        >
+          🗂️ Tableau Kanban
+        </button>
+        {role !== 'enseignant' && (
+          <button
+            className={`btn ${activeTab === 'capacites' ? '' : 'btn-secondary'}`}
+            style={{ backgroundColor: activeTab === 'capacites' ? '#2563eb' : '#f8fafc', color: activeTab === 'capacites' ? 'white' : '#475569', border: '1px solid #cbd5e1' }}
+            onClick={() => setActiveTab('capacites')}
+          >
+            ⚙️ Capacités & Enseignants
+          </button>
+        )}
+      </div>
+
+      {activeTab === 'liste' && (
+        <div className="page-container">
+        <div className="search-area">
+          <select className="filter-select" value={filterBy} onChange={(e) => setFilterBy(e.target.value)}>
+            <option>Tous les champs</option>
+            <option>ID PFE</option>
+            <option>Sujet</option>
+            <option>Type de projet</option>
+            <option>Spécialité</option>
+            <option>Encadrant</option>
+            <option>Type contrat enc.</option>
+          </select>
           <input
             type="text"
             placeholder="Rechercher..."
@@ -753,55 +758,64 @@ function GestionPFEs() {
           >
             🔄 Réassigner Tous
           </button>
-          <input type="file" accept=".csv,.json,.xlsx,.xls" ref={pfeFileRef} onChange={handleFileChange} style={{ display: 'none' }} />
+          <input type="file" accept=".xlsx,.xls" ref={pfeFileRef} onChange={handleFileChange} style={{ display: 'none' }} />
         </div>
-      </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="table-card">Chargement en cours...</div>
       ) : (
         <>
-          <div className="stats-card">
-            <h3>Plafond global de groupes PFE</h3>
-            <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#64748b' }}>
-              Le plafond par défaut. Si un enseignant n'a pas de capacité spécifique définie ci-dessous, ce plafond s'appliquera.
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <label htmlFor="plafond-global-pfe" style={{ fontWeight: 600 }}>
-                Max. groupes simultanés
-              </label>
-              <input
-                id="plafond-global-pfe"
-                type="number"
-                min={1}
-                max={99}
-                style={{ width: '80px', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                value={plafondGroupes}
-                onChange={(ev) => {
-                  const v = ev.target.value;
-                  if (v === '') return;
-                  const parsed = parseInt(v, 10);
-                  if (!Number.isNaN(parsed)) setPlafondGroupes(parsed);
-                }}
-                onBlur={() => setPlafondGroupes((x) => clampPlafondInput(x))}
-              />
-              <button
-                type="button"
-                className="btn"
-                disabled={savingPlafond || !plafondDirty}
-                onClick={handleSavePlafondGlobal}
-              >
-                {savingPlafond ? 'Enregistrement…' : 'Enregistrer le plafond'}
-              </button>
-              {!plafondDirty && (
-                <span style={{ fontSize: '13px', color: '#64748b' }}>Modifiez la valeur pour enregistrer.</span>
-              )}
-            </div>
-
-            <h3 style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>Capacité d'encadrement individuelle</h3>
-            <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#64748b' }}>
-              Définissez le nombre d'étudiants (ou groupes PFE) que chaque enseignant souhaite encadrer.
-            </p>
+          {activeTab === 'capacites' && role !== 'enseignant' && (
+            <div className="stats-card">
+            {role !== 'enseignant' && (
+              <>
+                <h3>Plafond global de groupes PFE (tous les encadrants)</h3>
+                <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#64748b' }}>
+                  Le même plafond s’applique à chaque encadrant par défaut. Vous pouvez cependant définir un plafond individuel par enseignant dans le tableau ci-dessous.
+                </p>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    gap: '12px',
+                    marginBottom: '16px',
+                  }}
+                >
+                  <label htmlFor="plafond-global-pfe" style={{ fontWeight: 600 }}>
+                    Max. groupes simultanés
+                  </label>
+                  <input
+                    id="plafond-global-pfe"
+                    type="number"
+                    min={1}
+                    max={99}
+                    style={{ width: '80px', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                    value={plafondGroupes}
+                    onChange={(ev) => {
+                      const v = ev.target.value;
+                      if (v === '') return;
+                      const parsed = parseInt(v, 10);
+                      if (!Number.isNaN(parsed)) setPlafondGroupes(parsed);
+                    }}
+                    onBlur={() => setPlafondGroupes((x) => clampPlafondInput(x))}
+                  />
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={savingPlafond || !plafondDirty}
+                    onClick={handleSavePlafondGlobal}
+                  >
+                    {savingPlafond ? 'Enregistrement…' : 'Enregistrer le plafond'}
+                  </button>
+                  {!plafondDirty && (
+                    <span style={{ fontSize: '13px', color: '#64748b' }}>Modifiez la valeur pour enregistrer.</span>
+                  )}
+                </div>
+              </>
+            )}
             <div style={{ maxHeight: '320px', overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
               <table className="table" style={{ margin: 0 }}>
                 <thead>
@@ -809,7 +823,7 @@ function GestionPFEs() {
                     <th>Matricule</th>
                     <th>Nom</th>
                     <th>Prénom</th>
-                    <th style={{ width: '150px' }}>Capacité Max</th>
+                    {role !== 'enseignant' && <th>Plafond Indiv.</th>}
                     <th style={{ width: '100px' }}>Actifs</th>
                   </tr>
                 </thead>
@@ -833,33 +847,43 @@ function GestionPFEs() {
                           style={
                             plafondAtteint
                               ? {
-                                backgroundColor: '#f8fafc',
-                              }
+                                  backgroundColor: '#e2e8f0',
+                                  color: '#475569',
+                                }
                               : undefined
                           }
                         >
                           <td>{e.matricule}</td>
                           <td>{e.nom}</td>
                           <td>{e.prenom}</td>
-                          <td>
-                            <input
-                              type="number"
-                              min={1}
-                              max={99}
-                              placeholder={plafondGroupes}
-                              style={{ width: '80px', padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-                              value={e.plafond_pfe !== null && e.plafond_pfe !== undefined ? e.plafond_pfe : ''}
-                              onChange={(ev) => {
-                                const v = ev.target.value;
-                                handleUpdateTeacherPlafond(e.matricule, v);
-                              }}
-                            />
-                          </td>
+                          {role !== 'enseignant' && (
+                            <td>
+                              <input
+                                type="number"
+                                min={1}
+                                max={99}
+                                defaultValue={e.plafond_pfe || ''}
+                                placeholder="Global"
+                                style={{ width: '70px', padding: '4px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                                onBlur={async (ev) => {
+                                  const val = ev.target.value === '' ? null : parseInt(ev.target.value, 10);
+                                  if (val === e.plafond_pfe) return;
+                                  try {
+                                    await axios.patch(`/api/enseignants/${e.matricule}/`, { plafond_pfe: val });
+                                    setMessage(`Plafond de ${e.nom} ${e.prenom} mis à jour.`);
+                                    loadData();
+                                  } catch (err) {
+                                    setError(`Erreur lors de la mise à jour pour ${e.nom}`);
+                                  }
+                                }}
+                              />
+                            </td>
+                          )}
                           <td>
                             <span
                               style={{
                                 fontWeight: 600,
-                                color: plafondAtteint ? '#ef4444' : '#10b981',
+                                color: plafondAtteint ? '#64748b' : '#0f172a',
                               }}
                             >
                               {actifs}/{max}
@@ -873,135 +897,83 @@ function GestionPFEs() {
               </table>
             </div>
           </div>
+          )}
 
-          {/* Statistiques des assignations */}
-          <div className="stats-card">
-            <h3>📊 État des Assignations</h3>
-            <div className="stats-grid">
-              <div className="stat-item">
-                <span className="stat-label">PFEs sans encadrant:</span>
-                <span className="stat-value">{getEncadrantStats().pfesWithoutEncadrant}</span>
+          {activeTab === 'kanban' && (
+            <>
+              {/* Statistiques des assignations */}
+              <div className="stats-card">
+                <h3>📊 État des Assignations</h3>
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <span className="stat-label">PFEs sans encadrant:</span>
+                    <span className="stat-value">{getEncadrantStats().pfesWithoutEncadrant}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">PFEs avec encadrant:</span>
+                    <span className="stat-value">{getEncadrantStats().pfesWithEncadrant}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Encadrants disponibles:</span>
+                    <span className="stat-value">{getEncadrantStats().availableEncadrants}/{getEncadrantStats().totalEncadrants}</span>
+                  </div>
+                </div>
               </div>
-              <div className="stat-item">
-                <span className="stat-label">PFEs avec encadrant:</span>
-                <span className="stat-value">{getEncadrantStats().pfesWithEncadrant}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">Encadrants disponibles:</span>
-                <span className="stat-value">{getEncadrantStats().availableEncadrants}/{getEncadrantStats().totalEncadrants}</span>
-              </div>
-              <div className="stat-item" style={{ borderLeft: '2px solid #e2e8f0', paddingLeft: '16px' }}>
-                <span className="stat-label">Étudiants avec PFE:</span>
-                <span className="stat-value" style={{ color: '#10b981' }}>{getEtudiantStats().affectes.length}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">Étudiants sans PFE:</span>
-                <span className="stat-value" style={{ color: '#ef4444' }}>{getEtudiantStats().nonAffectes.length}</span>
-              </div>
-            </div>
-          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
-            <div className="stats-card" style={{ margin: 0 }}>
-              <h3>❌ Étudiants non affectés</h3>
-              <div style={{ maxHeight: '250px', overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                <table className="table" style={{ margin: 0 }}>
-                  <thead>
-                    <tr>
-                      <th>CIN</th>
-                      <th>Nom Prénom</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getEtudiantStats().nonAffectes.length === 0 ? (
-                      <tr><td colSpan={2} style={{ color: '#64748b' }}>Tous les étudiants ont un PFE.</td></tr>
-                    ) : (
-                      getEtudiantStats().nonAffectes.map((e, idx) => (
-                        <tr key={idx}>
-                          <td>{e.cin}</td>
-                          <td>{e.nom} {e.prenom}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+              <div className="table-card" style={{ marginTop: '20px' }}>
+                <div className="card-header">
+                  <h3>Affectation Kanban (Glisser-Déposer)</h3>
+                </div>
+                <AffectationKanban
+                  pfes={filteredPFEs}
+                  enseignants={enseignantsTriés}
+                  onAssign={handleAssignKanban}
+                  getEncadrantMaxGroupes={getEncadrantMaxGroupes}
+                  getEncadrantGroupCount={getEncadrantGroupCount}
+                />
               </div>
-            </div>
+            </>
+          )}
 
-            <div className="stats-card" style={{ margin: 0 }}>
-              <h3>✅ Étudiants affectés</h3>
-              <div style={{ maxHeight: '250px', overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                <table className="table" style={{ margin: 0 }}>
-                  <thead>
-                    <tr>
-                      <th>CIN</th>
-                      <th>Nom Prénom</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getEtudiantStats().affectes.length === 0 ? (
-                      <tr><td colSpan={2} style={{ color: '#64748b' }}>Aucun étudiant affecté.</td></tr>
-                    ) : (
-                      getEtudiantStats().affectes.map((e, idx) => (
-                        <tr key={idx}>
-                          <td>{e.cin}</td>
-                          <td>{e.nom} {e.prenom}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+          {activeTab === 'liste' && (
+            <div className="table-card">
+              <div className="card-header">
+                <h3>PFE</h3>
+                <div className="button-group">
+                  <button className="btn" type="button" onClick={() => handleOpenForm(null)}>
+                    Ajouter un PFE
+                  </button>
+                  <button className="btn import-btn" type="button" onClick={handleImportExcel}>
+                    Importer PFE
+                  </button>
+                </div>
               </div>
+              <PFEsTable
+                pfes={filteredPFEs}
+                onEdit={handleOpenForm}
+                onDelete={handleDeletePFE}
+                onRandomAssign={handleRandomAssignEncadrant}
+                enseignants={enseignants || []}
+                encadrantGroupCount={getEncadrantGroupCount()}
+                getEncadrantMaxGroupes={getEncadrantMaxGroupes}
+              />
             </div>
-          </div>
-
-          <div className="table-card">
-            <div className="card-header">
-              <h3>PFE</h3>
-              <div className="button-group">
-                <button className="btn" type="button" onClick={() => handleOpenForm(null)}>
-                  Ajouter un PFE
-                </button>
-                <button className="btn import-btn" type="button" onClick={handleImportExcel}>
-                  Importer PFE
-                </button>
-              </div>
-            </div>
-            <PFEsTable
-              pfes={filteredPFEs}
-              onEdit={handleOpenForm}
-              onDelete={handleDeletePFE}
-              onRandomAssign={handleRandomAssignEncadrant}
-              enseignants={enseignants || []}
-              encadrantGroupCount={getEncadrantGroupCount()}
-              getEncadrantMaxGroupes={getEncadrantMaxGroupes}
-              filterBy={filterBy}
-            />
-          </div>
+          )}
         </>
       )}
 
-      {showForm && (() => {
-        const encadrantCount = getEncadrantGroupCount();
-        const availableEncadrants = enseignants.filter((e) => {
-          if (selectedPFE && e.matricule === selectedPFE.encadrant) return true;
-          const k = matriculeKey(e.matricule);
-          const used = k ? encadrantCount[k] || 0 : 0;
-          return used < getEncadrantMaxGroupes(e);
-        });
-
-        return (
-          <PFEForm
-            pfe={selectedPFE}
-            pfes={pfes || []}
-            enseignants={availableEncadrants}
-            etudiants={etudiants || []}
-            specialites={specialites || []}
-            onCancel={handleCloseForm}
-            onSubmit={handleSavePFE}
-          />
-        );
-      })()}
+      {showForm && (
+        <PFEForm
+          pfe={selectedPFE}
+          pfes={pfes || []}
+          enseignants={enseignants || []}
+          jurys={[]}
+          etudiants={etudiants || []}
+          specialites={specialites || []}
+          onCancel={handleCloseForm}
+          onSubmit={handleSavePFE}
+        />
+      )}
     </div>
   );
 }

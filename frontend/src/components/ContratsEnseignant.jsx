@@ -26,6 +26,8 @@ function ContratsTable({ enseignants }) {
         <thead>
           <tr>
             <th>🆔 Matricule</th>
+            <th>👤 Nom</th>
+            <th>🧑‍🎓 Prénom</th>
             <th>📄 Type Contrat</th>
             <th>📅 Date début</th>
             <th>📅 Date fin</th>
@@ -54,6 +56,8 @@ function ContratsTable({ enseignants }) {
             return (
               <tr key={e?.matricule || 'unknown'}>
                 <td>{e?.matricule || "-"}</td>
+                <td>{e?.nom || "-"}</td>
+                <td>{e?.prenom || "-"}</td>
                 <td>{e?.typeContrat || "-"}</td>
                 <td>{e?.dateDebut || "-"}</td>
                 <td>{e?.dateFin || "-"}</td>

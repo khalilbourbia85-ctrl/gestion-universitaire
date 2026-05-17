@@ -79,6 +79,7 @@ class PFESerializer(serializers.ModelSerializer):
             'sujet',
             'duree',
             'specialite',
+            'type_projet',
             'etudiants',
             'etudiants_detail',
             'encadrant',
@@ -202,6 +203,8 @@ class SoutenanceSerializer(serializers.ModelSerializer):
             'etudiants_detail',
             'resultat_technique',
             'resultat_finale',
+            'depot_electronique',
+            'depot_papier',
         ]
         read_only_fields = ['idSoutenance']
 
@@ -241,16 +244,33 @@ class SoutenanceSerializer(serializers.ModelSerializer):
             if rap is None: rap = self.instance.rapporteur
             if etudiants is None: etudiants = self.instance.etudiants.all()
 
-        # 1. Étudiants : une seule soutenance
+        # 1. Étudiants : une seule soutenance par type et validation des dates
         if etudiants:
             for etudiant in etudiants:
                 qs_soutenance = etudiant.soutenances.all()
                 if self.instance is not None:
                     qs_soutenance = qs_soutenance.exclude(pk=self.instance.pk)
-                if qs_soutenance.exists():
+                
+                # Vérifier s'il a déjà une soutenance du même type
+                if qs_soutenance.filter(type_soutenance=type_s).exists():
                     raise serializers.ValidationError({
-                        'etudiants': f"L'étudiant {etudiant} a déjà une soutenance programmée."
+                        'etudiants': f"L'étudiant {etudiant} a déjà une soutenance {type_s} programmée."
                     })
+                
+                # Validation chronologique : Technique avant Finale
+                if date_s:
+                    if type_s == 'technique':
+                        finale = qs_soutenance.filter(type_soutenance='finale').first()
+                        if finale and date_s >= finale.date_soutenance:
+                            raise serializers.ValidationError({
+                                'date_soutenance': f"La soutenance technique ({date_s}) doit avoir lieu avant la soutenance finale de l'étudiant {etudiant} ({finale.date_soutenance})."
+                            })
+                    elif type_s == 'finale':
+                        technique = qs_soutenance.filter(type_soutenance='technique').first()
+                        if technique and date_s <= technique.date_soutenance:
+                            raise serializers.ValidationError({
+                                'date_soutenance': f"La soutenance finale ({date_s}) doit avoir lieu après la soutenance technique de l'étudiant {etudiant} ({technique.date_soutenance})."
+                            })
 
         # 2. Chevauchement Salles et Enseignants (Seulement si duree est definie)
         if type_s == 'finale' and duree is None:

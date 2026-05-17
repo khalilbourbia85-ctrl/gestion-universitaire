@@ -14,6 +14,7 @@ function EtudiantsTable({ etudiants, onEdit, onDelete, filterBy = ['Tous les cha
 {showField('Nationalité') && <th>🌍 Nationalité</th>}
 {showField('Nom') && <th>👤Nom</th>}
 {showField('Prénom') && <th>👤Prénom</th>}
+{showField('Genre') && <th>⚧Genre</th>}
 {showField('Email') && <th>📧Email</th>}
 {showField('Téléphone') && <th>📞Téléphone</th>}
 {filterBy === 'Tous les champs' && <th>🎂Naissance</th>}
@@ -35,6 +36,7 @@ function EtudiantsTable({ etudiants, onEdit, onDelete, filterBy = ['Tous les cha
             {showField('Nationalité') && <td>{e.nationalite || '-'}</td>}
             {showField('Nom') && <td>{e.nom || '-'}</td>}
             {showField('Prénom') && <td>{e.prenom || '-'}</td>}
+            {showField('Genre') && <td>{e.genre === 'F' ? 'Femme' : 'Homme'}</td>}
             {showField('Email') && <td>{e.email || '-'}</td>}
             {showField('Téléphone') && <td>{e.numTel || '-'}</td>}
             {filterBy === 'Tous les champs' && <td>{e.dateNaissance || '-'}</td>}

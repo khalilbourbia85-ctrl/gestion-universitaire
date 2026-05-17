@@ -49,6 +49,8 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
   const [filteredEtudiants, setFilteredEtudiants] = useState([]);
   const [resultatTechnique, setResultatTechnique] = useState('');
   const [resultatFinale, setResultatFinale] = useState('');
+  const [depotElectronique, setDepotElectronique] = useState(false);
+  const [depotPapier, setDepotPapier] = useState(false);
 
   /** Enseignants pouvant être rapporteurs : pas l'encadrant ; pas contrat doctorant ni docteur. */
   const rapporteursEligibles = useMemo(() => {
@@ -118,6 +120,8 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
       );
       setResultatTechnique(soutenance.resultat_technique || '');
       setResultatFinale(soutenance.resultat_finale || '');
+      setDepotElectronique(Boolean(soutenance.depot_electronique));
+      setDepotPapier(Boolean(soutenance.depot_papier));
     } else {
       setDateSoutenance('');
       setHeureSoutenance('09:00');
@@ -131,6 +135,8 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
       setSelectedEtudiants([]);
       setResultatTechnique('');
       setResultatFinale('');
+      setDepotElectronique(false);
+      setDepotPapier(false);
     }
     setStudentSearch('');
     setErrorMessage('');
@@ -185,6 +191,11 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
 
   const handleSave = (event) => {
     event.preventDefault();
+
+    if (!depotElectronique || !depotPapier) {
+      setErrorMessage("Impossible de planifier la soutenance et d'affecter un rapporteur tant que les deux dépôts (électronique et papier) ne sont pas effectués (Oui).");
+      return;
+    }
 
     let finalRapporteur = rapporteur;
     if (rapporteurMode === 'random') {
@@ -254,6 +265,8 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
       etudiants: etudiantsPayload,
       resultat_technique: resultatTechnique.trim(),
       resultat_finale: resultatFinale.trim(),
+      depot_electronique: depotElectronique,
+      depot_papier: depotPapier,
     };
     if (soutenance?.idSoutenance != null) {
       payload.idSoutenance = soutenance.idSoutenance;
@@ -318,6 +331,113 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
         <h3>{soutenance ? 'Modifier la soutenance' : 'Ajouter une nouvelle soutenance'}</h3>
         {errorMessage && <div className="success-message" style={{ background: '#e53e3e' }}>{errorMessage}</div>}
         <form onSubmit={handleSave}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px', padding: '10px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+            <div className="form-row" style={{ marginBottom: 0 }}>
+              <label className="checkbox-label" style={{ fontWeight: 'bold', cursor: selectedEtudiants.length === 0 ? 'not-allowed' : 'pointer', opacity: selectedEtudiants.length === 0 ? 0.5 : 1 }}>
+                <input
+                  type="checkbox"
+                  checked={depotElectronique}
+                  disabled={selectedEtudiants.length === 0}
+                  onChange={(e) => setDepotElectronique(e.target.checked)}
+                />
+                Dépôt électronique effectué
+              </label>
+            </div>
+            <div className="form-row" style={{ marginBottom: 0 }}>
+              <label className="checkbox-label" style={{ fontWeight: 'bold', cursor: selectedEtudiants.length === 0 ? 'not-allowed' : 'pointer', opacity: selectedEtudiants.length === 0 ? 0.5 : 1 }}>
+                <input
+                  type="checkbox"
+                  checked={depotPapier}
+                  disabled={selectedEtudiants.length === 0}
+                  onChange={(e) => setDepotPapier(e.target.checked)}
+                />
+                Dépôt papier effectué
+              </label>
+            </div>
+          </div>
+          <div className="form-row">
+            <label>Encadrant *</label>
+            <select
+              value={encadrant}
+              onChange={(e) => {
+                setEncadrant(e.target.value);
+                // Si l'encadrant change, réinitialiser la sélection d'étudiants
+                setSelectedEtudiants([]);
+                setPfe('');
+              }}
+              required
+            >
+              <option value="">Sélectionner un encadrant</option>
+              {enseignants && enseignants.map((ens) => (
+                <option key={ens.matricule} value={ens.matricule}>
+                  {ens.nom} {ens.prenom} ({ens.matricule})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-row">
+            <label>Étudiants *</label>
+            {!encadrant && (
+              <div style={{ marginBottom: '12px', padding: '8px', backgroundColor: '#fef3c7', borderRadius: '4px', color: '#92400e', fontSize: '13px' }}>
+                Sélectionnez d'abord un encadrant pour voir ses étudiants
+              </div>
+            )}
+            <div style={{ marginBottom: '8px', fontSize: '13px', color: '#64748b' }}>
+              {filteredEtudiants.length === 0 && encadrant ? 'Cet encadrant n\'a pas d\'étudiants' : ''}
+              {selectedEtudiants.length === 0 ? 'Sélectionnez au moins 1 étudiant' : `${selectedEtudiants.length} étudiant(s) sélectionné(s)`}
+            </div>
+            {encadrant && (
+              <input
+                type="text"
+                placeholder="Rechercher un étudiant (nom ou prénom)..."
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  marginBottom: '12px',
+                  border: '2px solid #e0e7ff',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  backgroundColor: '#f8fafc',
+                  transition: 'all 0.3s'
+                }}
+              />
+            )}
+            <div className="checkbox-grid">
+              {filteredEtudiants.length > 0 ? (
+                filteredEtudiants
+                  .filter((etudiant) => {
+                    const searchLower = studentSearch.toLowerCase();
+                    const nom = String(etudiant.nom ?? '').toLowerCase();
+                    const prenom = String(etudiant.prenom ?? '').toLowerCase();
+                    return nom.includes(searchLower) || prenom.includes(searchLower);
+                  })
+                  .map((etudiant) => (
+                  <label key={etudiant.idEtudiant} className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      value={etudiant.idEtudiant}
+                      checked={selectedEtudiants.includes(Number(etudiant.idEtudiant))}
+                      onChange={handleStudentChange}
+                      disabled={
+                        selectedEtudiants.length >= 2 &&
+                        !selectedEtudiants.includes(Number(etudiant.idEtudiant))
+                      }
+                    />
+                    {etudiant.nom} {etudiant.prenom}
+                  </label>
+                ))
+              ) : (
+                encadrant && <p style={{ color: '#64748b', fontSize: '13px' }}>Aucun étudiant disponible pour cet encadrant</p>
+              )}
+            </div>
+            <div className={`student-count ${selectedEtudiants.length >= 1 ? 'valid' : 'invalid'}`}>
+              {selectedEtudiants.length === 0 && '❌ Veuillez sélectionner au moins 1 étudiant'}
+              {selectedEtudiants.length >= 1 && `✓ ${selectedEtudiants.length} étudiant(s) sélectionné(s)`}
+            </div>
+          </div>
+
           <div className="form-row">
             <label>Date de soutenance</label>
             <input
@@ -393,17 +513,7 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
             </p>
           </div>
 
-          <div className="form-row">
-            <label>Encadrant *</label>
-            <select value={encadrant} onChange={(e) => setEncadrant(e.target.value)} required>
-              <option value="">Sélectionner un encadrant</option>
-              {enseignants.map((enseignant) => (
-                <option key={enseignant.matricule} value={enseignant.matricule}>
-                  {enseignant.nom} {enseignant.prenom} ({enseignant.matricule})
-                </option>
-              ))}
-            </select>
-          </div>
+
 
           <div className="form-row">
             <label>Rapporteur *</label>
@@ -420,11 +530,12 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
                 alignItems: 'center',
               }}
             >
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: (!depotElectronique || !depotPapier) ? 'not-allowed' : 'pointer', opacity: (!depotElectronique || !depotPapier) ? 0.5 : 1 }}>
                 <input
                   type="radio"
                   name="rapporteurMode"
                   checked={rapporteurMode === 'manual'}
+                  disabled={!depotElectronique || !depotPapier}
                   onChange={() => {
                     setRapporteurMode('manual');
                     setErrorMessage('');
@@ -432,11 +543,12 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
                 />
                 Choix manuel
               </label>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: (!depotElectronique || !depotPapier) ? 'not-allowed' : 'pointer', opacity: (!depotElectronique || !depotPapier) ? 0.5 : 1 }}>
                 <input
                   type="radio"
                   name="rapporteurMode"
                   checked={rapporteurMode === 'random'}
+                  disabled={!depotElectronique || !depotPapier}
                   onChange={() => {
                     setRapporteurMode('random');
                     setRapporteur('');
@@ -451,6 +563,7 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
                 value={rapporteur}
                 onChange={(e) => setRapporteur(e.target.value)}
                 required={rapporteursEligibles.length > 0}
+                disabled={!depotElectronique || !depotPapier}
               >
                 <option value="">Sélectionner un rapporteur</option>
                 {rapporteursEligibles.map((ens) => (
@@ -467,7 +580,12 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
                   tirer au sort maintenant pour voir le résultat avant de valider.
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                  <button type="button" className="btn import-btn" onClick={handleTirageRapporteur}>
+                  <button 
+                    type="button" 
+                    className="btn import-btn" 
+                    onClick={handleTirageRapporteur}
+                    disabled={!depotElectronique || !depotPapier}
+                  >
                     Tirer au sort un rapporteur
                   </button>
                   {rapporteur && (
@@ -502,89 +620,34 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
             </select>
           </div>
 
-          <div className="form-row">
-            <label>Étudiants *</label>
-            {!encadrant && (
-              <div style={{ marginBottom: '12px', padding: '8px', backgroundColor: '#fef3c7', borderRadius: '4px', color: '#92400e', fontSize: '13px' }}>
-                Sélectionnez d'abord un encadrant pour voir ses étudiants
-              </div>
-            )}
-            <div style={{ marginBottom: '8px', fontSize: '13px', color: '#64748b' }}>
-              {filteredEtudiants.length === 0 && encadrant ? 'Cet encadrant n\'a pas d\'étudiants' : ''}
-              {selectedEtudiants.length === 0 ? 'Sélectionnez au moins 1 étudiant' : `${selectedEtudiants.length} étudiant(s) sélectionné(s)`}
-            </div>
-            {encadrant && (
-              <input
-                type="text"
-                placeholder="Rechercher un étudiant (nom ou prénom)..."
-                value={studentSearch}
-                onChange={(e) => setStudentSearch(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  marginBottom: '12px',
-                  border: '2px solid #e0e7ff',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  backgroundColor: '#f8fafc',
-                  transition: 'all 0.3s'
-                }}
-              />
-            )}
-            <div className="checkbox-grid">
-              {filteredEtudiants.length > 0 ? (
-                filteredEtudiants
-                  .filter((etudiant) => {
-                    const searchLower = studentSearch.toLowerCase();
-                    const nom = String(etudiant.nom ?? '').toLowerCase();
-                    const prenom = String(etudiant.prenom ?? '').toLowerCase();
-                    return nom.includes(searchLower) || prenom.includes(searchLower);
-                  })
-                  .map((etudiant) => (
-                  <label key={etudiant.idEtudiant} className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      value={etudiant.idEtudiant}
-                      checked={selectedEtudiants.includes(Number(etudiant.idEtudiant))}
-                      onChange={handleStudentChange}
-                      disabled={
-                        selectedEtudiants.length >= 2 &&
-                        !selectedEtudiants.includes(Number(etudiant.idEtudiant))
-                      }
-                    />
-                    {etudiant.nom} {etudiant.prenom}
-                  </label>
-                ))
-              ) : (
-                encadrant && <p style={{ color: '#64748b', fontSize: '13px' }}>Aucun étudiant disponible pour cet encadrant</p>
-              )}
-            </div>
-            <div className={`student-count ${selectedEtudiants.length >= 1 ? 'valid' : 'invalid'}`}>
-              {selectedEtudiants.length === 0 && '❌ Veuillez sélectionner au moins 1 étudiant'}
-              {selectedEtudiants.length >= 1 && `✓ ${selectedEtudiants.length} étudiant(s) sélectionné(s)`}
-            </div>
-          </div>
-
           {soutenance && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <div className="form-row">
-                <label>Résultat Soutenance Technique</label>
-                <input
-                  type="text"
-                  value={resultatTechnique}
-                  placeholder="Ex: Validé, Note..."
-                  onChange={(e) => setResultatTechnique(e.target.value)}
-                />
-              </div>
-              <div className="form-row">
-                <label>Résultat Soutenance Finale</label>
-                <input
-                  type="text"
-                  value={resultatFinale}
-                  placeholder="Ex: 15/20, Mention..."
-                  onChange={(e) => setResultatFinale(e.target.value)}
-                />
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
+              {typeSoutenance === 'technique' && (
+                <div className="form-row">
+                  <label>Résultat Soutenance Technique</label>
+                  <select
+                    value={resultatTechnique}
+                    onChange={(e) => setResultatTechnique(e.target.value)}
+                  >
+                    <option value="">Sélectionner...</option>
+                    <option value="Validé">Validé</option>
+                    <option value="Non validé">Non validé</option>
+                  </select>
+                </div>
+              )}
+              {typeSoutenance === 'finale' && (
+                <div className="form-row">
+                  <label>Résultat Soutenance Finale</label>
+                  <select
+                    value={resultatFinale}
+                    onChange={(e) => setResultatFinale(e.target.value)}
+                  >
+                    <option value="">Sélectionner...</option>
+                    <option value="Validé">Validé</option>
+                    <option value="Non validé">Non validé</option>
+                  </select>
+                </div>
+              )}
             </div>
           )}
 

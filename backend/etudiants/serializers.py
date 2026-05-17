@@ -36,6 +36,7 @@ class EtudiantSerializer(serializers.ModelSerializer):
             'situation_pfe',
             'annee_universitaire',
             'groupe',
+            'genre',
             'licence',
             'specialite',
             'licence_detail',

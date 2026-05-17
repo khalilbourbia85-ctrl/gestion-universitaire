@@ -26,6 +26,8 @@ function DiplomesTable({ enseignants }) {
         <thead>
           <tr>
             <th>🆔 Matricule</th>
+            <th>👤 Nom</th>
+            <th>🧑‍🎓 Prénom</th>
             <th>🎓 ID Diplôme</th>
             <th>📄 Libellé</th>
             <th>🧩 Spécialité</th>
@@ -37,6 +39,8 @@ function DiplomesTable({ enseignants }) {
           {enseignants.map((e) => (
             <tr key={e?.matricule || 'unknown'}>
               <td>{e?.matricule || "-"}</td>
+              <td>{e?.nom || "-"}</td>
+              <td>{e?.prenom || "-"}</td>
               <td>{e?.diplome?.idDiplome || "-"}</td>
               <td>{e?.diplome?.libelleDiplome || "-"}</td>
               <td>{e?.diplome?.specialite || "-"}</td>

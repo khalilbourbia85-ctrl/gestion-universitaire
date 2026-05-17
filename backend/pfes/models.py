@@ -57,6 +57,7 @@ class PFE(models.Model):
     sujet = models.CharField(max_length=250)
     duree = models.PositiveIntegerField(help_text='Durée en mois ou unité métier')
     specialite = models.CharField(max_length=150)
+    type_projet = models.CharField(max_length=100, null=True, blank=True, help_text='Type de projet pour le PFE')
     encadrant = models.ForeignKey(
         Enseignant,
         on_delete=models.PROTECT,
@@ -103,7 +104,7 @@ class Soutenance(models.Model):
     ]
 
     idSoutenance = models.AutoField(primary_key=True)
-    pfe = models.OneToOneField(PFE, on_delete=models.CASCADE, related_name='soutenance', null=True, blank=True)
+    pfe = models.ForeignKey(PFE, on_delete=models.CASCADE, related_name='soutenances', null=True, blank=True)
     type_soutenance = models.CharField(
         max_length=20,
         choices=TYPE_SOUTENANCE_CHOICES,
@@ -138,6 +139,8 @@ class Soutenance(models.Model):
     )
     resultat_technique = models.CharField(max_length=100, null=True, blank=True, help_text="Résultat d'évaluation de Soutenance technique")
     resultat_finale = models.CharField(max_length=100, null=True, blank=True, help_text="Résultat d'évaluation de Soutenance finale")
+    depot_electronique = models.BooleanField(default=False, help_text='Dépôt électronique effectué (Oui/Non)')
+    depot_papier = models.BooleanField(default=False, help_text='Dépôt papier effectué (Oui/Non)')
 
     def __str__(self):
         return f"Soutenance {self.idSoutenance} - {self.date_soutenance}"

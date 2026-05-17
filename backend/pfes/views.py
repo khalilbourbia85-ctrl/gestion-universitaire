@@ -2,6 +2,7 @@ import re
 from django.db import transaction
 from django.db.models import Q
 from rest_framework import status, viewsets
+from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -374,3 +375,91 @@ class SoutenanceViewSet(viewsets.ModelViewSet):
         return qs.filter(
             Q(encadrant=enseignant) | Q(rapporteur=enseignant)
         ).distinct()
+
+class DashboardStatsView(APIView):
+    def get(self, request, *args, **kwargs):
+        from etudiants.models import Etudiant
+        from pfes.models import PFE, Soutenance
+        from django.db.models import Count, Q
+
+        total_etudiants = Etudiant.objects.count()
+        
+        # Pourcentage de dépôt (Dépôt électronique ou papier = True)
+        etudiants_ayant_depose = Soutenance.objects.filter(
+            Q(depot_electronique=True) | Q(depot_papier=True)
+        ).values('etudiants').distinct().count()
+        
+        pourcentage_depot = (etudiants_ayant_depose / total_etudiants * 100) if total_etudiants > 0 else 0
+
+        # Taux de réussite technique
+        soutenance_validees = Soutenance.objects.filter(resultat_technique__icontains='Validé').count()
+        soutenance_non_validees = Soutenance.objects.filter(resultat_technique__icontains='Non validé').count()
+        total_techniques = soutenance_validees + soutenance_non_validees
+        taux_reussite_technique = (soutenance_validees / total_techniques * 100) if total_techniques > 0 else 0
+
+        # Taux de réussite finale
+        soutenance_finale_validees = Soutenance.objects.filter(resultat_finale__icontains='Validé').count()
+        soutenance_finale_non_validees = Soutenance.objects.filter(resultat_finale__icontains='Non validé').count()
+        total_finales = soutenance_finale_validees + soutenance_finale_non_validees
+        taux_reussite_finale = (soutenance_finale_validees / total_finales * 100) if total_finales > 0 else 0
+
+        # Nombre d'étudiants par année et par lieu de stage
+        lieux_stage = PFE.objects.exclude(lieu_stage__isnull=True).exclude(lieu_stage='').values('lieu_stage').annotate(count=Count('etudiants')).order_by('-count')[:10]
+
+        # Monôme vs Binôme
+        pfes_counts = PFE.objects.annotate(nb_etudiants=Count('etudiants'))
+        monomes = pfes_counts.filter(nb_etudiants=1).count()
+        binomes = pfes_counts.filter(nb_etudiants=2).count()
+        total_projets = monomes + binomes
+        pct_monome = (monomes / total_projets * 100) if total_projets > 0 else 0
+        pct_binome = (binomes / total_projets * 100) if total_projets > 0 else 0
+
+        # Comparaison de réussite par genre
+        # Récupération des soutenances validées par étudiant
+        etudiants_valides_ids = Soutenance.objects.filter(resultat_technique__icontains='Validé').values_list('etudiants', flat=True)
+        etudiants_total_soutenus_ids = Soutenance.objects.exclude(resultat_technique__isnull=True).exclude(resultat_technique='').values_list('etudiants', flat=True)
+
+        hommes_valides = Etudiant.objects.filter(idEtudiant__in=etudiants_valides_ids, genre='M').count()
+        femmes_valides = Etudiant.objects.filter(idEtudiant__in=etudiants_valides_ids, genre='F').count()
+        hommes_total = Etudiant.objects.filter(idEtudiant__in=etudiants_total_soutenus_ids, genre='M').count()
+        femmes_total = Etudiant.objects.filter(idEtudiant__in=etudiants_total_soutenus_ids, genre='F').count()
+
+        taux_reussite_hommes = (hommes_valides / hommes_total * 100) if hommes_total > 0 else 0
+        taux_reussite_femmes = (femmes_valides / femmes_total * 100) if femmes_total > 0 else 0
+
+        # Réussite par département
+        # On va grouper par département de la licence de l'étudiant
+        from academique.models import Departement
+        deps = Departement.objects.all()
+        dep_stats = []
+        for dep in deps:
+            total_dep = Etudiant.objects.filter(licence__departement=dep, idEtudiant__in=etudiants_total_soutenus_ids).count()
+            valides_dep = Etudiant.objects.filter(licence__departement=dep, idEtudiant__in=etudiants_valides_ids).count()
+            taux = (valides_dep / total_dep * 100) if total_dep > 0 else 0
+            if total_dep > 0:
+                dep_stats.append({
+                    'departement': dep.nom,
+                    'taux_reussite': taux,
+                    'total': total_dep
+                })
+        
+        dep_stats = sorted(dep_stats, key=lambda x: x['taux_reussite'], reverse=True)
+
+        return Response({
+            'total_etudiants': total_etudiants,
+            'etudiants_ayant_depose': etudiants_ayant_depose,
+            'pourcentage_depot': pourcentage_depot,
+            'taux_reussite_technique': taux_reussite_technique,
+            'taux_reussite_finale': taux_reussite_finale,
+            'soutenances_validees': soutenance_validees,
+            'soutenances_non_validees': soutenance_non_validees,
+            'soutenances_finale_validees': soutenance_finale_validees,
+            'soutenances_finale_non_validees': soutenance_finale_non_validees,
+            'lieux_stage': list(lieux_stage),
+            'pct_monome': pct_monome,
+            'pct_binome': pct_binome,
+            'taux_reussite_hommes': taux_reussite_hommes,
+            'taux_reussite_femmes': taux_reussite_femmes,
+            'stats_departements': dep_stats
+        })
+

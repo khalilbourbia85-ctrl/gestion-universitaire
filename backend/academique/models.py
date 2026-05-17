@@ -1,4 +1,5 @@
 from django.db import models
+from decimal import Decimal
 
 
 class Departement(models.Model):
@@ -100,3 +101,63 @@ class Module(models.Model):
 
     def __str__(self):
         return f"{self.nom} ({self.code}) - {self.specialite.nom} - {self.semestre}"
+
+
+class UEElement(models.Model):
+    """Élément constitutif d'une UE / matière à affecter à un enseignant."""
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='ue_elements')
+    nom = models.CharField(max_length=255)
+    code = models.CharField(max_length=50, blank=True, null=True)
+    coefficient = models.DecimalField(max_digits=5, decimal_places=2, default=1)
+    credit = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    vh_c = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='Volume horaire Cours')
+    vh_td = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='Volume horaire TD')
+    vh_tp = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='Volume horaire TP')
+    vh_ci = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='Volume horaire CI')
+    sections = models.PositiveIntegerField(default=1, verbose_name='Nombre de sections')
+    groupes_td = models.PositiveIntegerField(default=1, verbose_name='Nombre de groupes TD')
+    sous_groupes_tp = models.PositiveIntegerField(default=1, verbose_name='Nombre de sous-groupes TP')
+    etudiants = models.PositiveIntegerField(default=0, verbose_name='Nombre d\'étudiants')
+    enseignant = models.ForeignKey('enseignants.Enseignant', on_delete=models.SET_NULL, null=True, blank=True, related_name='ue_elements')
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['module__nom', 'nom']
+        verbose_name = "Élément UE"
+        verbose_name_plural = "Éléments UE"
+
+    def __str__(self):
+        label = self.nom or 'Élément UE'
+        return f"{label} - {self.module.nom}"
+
+    def total_heures(self):
+        return (
+            (self.vh_c or Decimal(0)) * (self.sections or 0)
+            + (self.vh_td or Decimal(0)) * (self.groupes_td or 0)
+            + (self.vh_tp or Decimal(0)) * (self.sous_groupes_tp or 0)
+            + (self.vh_ci or Decimal(0)) * (self.sections or 0)
+        )
+
+class AffectationDetail(models.Model):
+    TYPE_CHOICES = [
+        ('C', 'Cours'),
+        ('TD', 'TD'),
+        ('TP', 'TP'),
+        ('CI', 'Cours Intégré')
+    ]
+    ue_element = models.ForeignKey(UEElement, on_delete=models.CASCADE, related_name='affectations_details')
+    enseignant = models.ForeignKey('enseignants.Enseignant', on_delete=models.CASCADE, related_name='affectations_details')
+    type_cours = models.CharField(max_length=2, choices=TYPE_CHOICES)
+    groupe = models.CharField(max_length=50, blank=True, null=True)
+    
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Détail d'affectation"
+        verbose_name_plural = "Détails d'affectation"
+        unique_together = ['ue_element', 'type_cours', 'groupe']
+
+    def __str__(self):
+        return f"{self.ue_element.nom} - {self.type_cours} ({self.groupe}) : {self.enseignant}"

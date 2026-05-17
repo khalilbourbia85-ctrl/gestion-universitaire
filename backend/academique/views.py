@@ -8,7 +8,8 @@ from django.db.models import Q
 import re
 
 from .models import Departement, Licence, Specialite, Module
-from .serializers import DepartementSerializer, LicenceSerializer, SpecialiteSerializer, ModuleSerializer
+from .models import Departement, Licence, Specialite, Module, UEElement
+from .serializers import DepartementSerializer, LicenceSerializer, SpecialiteSerializer, ModuleSerializer, UEElementSerializer
 from rest_framework.permissions import BasePermission
 
 class IsAdminOrChefDepartement(BasePermission):
@@ -283,3 +284,60 @@ class ModuleViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(modules, many=True)
             return Response(serializer.data)
         return Response([], status=status.HTTP_400_BAD_REQUEST)
+
+
+class UEElementViewSet(viewsets.ModelViewSet):
+    queryset = UEElement.objects.select_related('module', 'enseignant').all()
+    serializer_class = UEElementSerializer
+    permission_classes = [IsAdminOrChefDepartement]
+
+    def get_queryset(self):
+        user = self.request.user
+        if getattr(user, 'is_superuser', False):
+            queryset = UEElement.objects.select_related('module', 'enseignant')
+        else:
+            enseignant = getattr(user, 'enseignant', None)
+            if not enseignant:
+                return UEElement.objects.none()
+            role = getattr(enseignant, 'role', '')
+            departement = getattr(enseignant, 'departement', None)
+            if role == 'admin':
+                queryset = UEElement.objects.select_related('module', 'enseignant')
+            elif role == 'chef_departement' and departement:
+                queryset = UEElement.objects.select_related('module', 'enseignant').filter(
+                    Q(module__licence__departement=departement) |
+                    Q(module__specialite__licence__departement=departement)
+                ).distinct()
+            else:
+                queryset = UEElement.objects.select_related('module', 'enseignant').filter(enseignant=enseignant)
+
+        module_id = self.request.query_params.get('module') or self.request.query_params.get('module_id')
+        specialite_id = self.request.query_params.get('specialite') or self.request.query_params.get('specialite_id')
+        licence_id = self.request.query_params.get('licence') or self.request.query_params.get('licence_id')
+
+        if module_id:
+            queryset = queryset.filter(module_id=module_id)
+        if specialite_id:
+            queryset = queryset.filter(module__specialite_id=specialite_id)
+        if licence_id:
+            queryset = queryset.filter(module__licence_id=licence_id)
+        return queryset
+
+from .models import AffectationDetail
+from .serializers import AffectationDetailSerializer
+
+class AffectationDetailViewSet(viewsets.ModelViewSet):
+    queryset = AffectationDetail.objects.all()
+    serializer_class = AffectationDetailSerializer
+    permission_classes = [IsAdminOrChefDepartement]
+
+    def get_queryset(self):
+        queryset = AffectationDetail.objects.all()
+        ue_element_id = self.request.query_params.get('ue_element')
+        enseignant_id = self.request.query_params.get('enseignant')
+        if ue_element_id:
+            queryset = queryset.filter(ue_element_id=ue_element_id)
+        if enseignant_id:
+            queryset = queryset.filter(enseignant_id=enseignant_id)
+        return queryset
+

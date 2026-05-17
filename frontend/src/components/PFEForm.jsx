@@ -29,13 +29,12 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
   const [lieu_stage, setLieu_stage] = useState('');
   const [licence, setLicence] = useState('');
   const [specialite, setSpecialite] = useState('');
+  const [typeProjet, setTypeProjet] = useState('');
   const [encadrant, setEncadrant] = useState('');
   const [selectedEtudiants, setSelectedEtudiants] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
   const [rulesAccepted, setRulesAccepted] = useState(false);
-  const [resultatTechnique, setResultatTechnique] = useState('');
-  const [resultatFinale, setResultatFinale] = useState('');
 
   useEffect(() => {
     if (pfe) {
@@ -75,21 +74,19 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
 
       setSpecialite(initialSpec);
       setLicence(initialLicence);
+      setTypeProjet(pfe.type_projet || '');
       setEncadrant(pfe.encadrant || '');
       setRulesAccepted(Boolean(pfe?.rulesAccepted));
-      setResultatTechnique(pfe.resultat_soutenance_technique || '');
-      setResultatFinale(pfe.resultat_soutenance_finale || '');
     } else {
       setRulesAccepted(false);
       setSujet('');
       setDuree('');
       setLieu_stage('');
       setSpecialite('');
+      setTypeProjet('');
       setLicence('');
       setEncadrant('');
       setSelectedEtudiants([]);
-      setResultatTechnique('');
-      setResultatFinale('');
     }
   }, [pfe, specialites, etudiants]);
 
@@ -128,10 +125,9 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
       duree: Number(duree),
       lieu_stage: lieu_stage.trim(),
       specialite: specialite.trim(),
+      typeProjet: typeProjet.trim() || null,
       encadrant: encadrant || null,
       etudiants: selectedEtudiants,
-      resultat_soutenance_technique: resultatTechnique.trim(),
-      resultat_soutenance_finale: resultatFinale.trim(),
       idPfe: pfe?.idPfe,
     });
   };
@@ -339,6 +335,16 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
           </div>
 
           <div className="form-row">
+            <label>Type de projet</label>
+            <input
+              type="text"
+              value={typeProjet}
+              placeholder="Ex: Recherche, Développement, Étude"
+              onChange={(e) => setTypeProjet(e.target.value)}
+            />
+          </div>
+
+          <div className="form-row">
             <label>Encadrant (Optionnel)</label>
             <select value={encadrant} onChange={(e) => setEncadrant(e.target.value)}>
               <option value="">Sélectionner un encadrant</option>
@@ -349,31 +355,6 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
               ))}
             </select>
           </div>
-
-          {pfe && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <div className="form-row">
-                <label>Résultat Soutenance Technique</label>
-                <input
-                  type="text"
-                  value={resultatTechnique}
-                  placeholder="Ex: Validé, Non validé, Note..."
-                  onChange={(e) => setResultatTechnique(e.target.value)}
-                />
-              </div>
-              <div className="form-row">
-                <label>Résultat Soutenance Finale</label>
-                <input
-                  type="text"
-                  value={resultatFinale}
-                  placeholder="Ex: 16/20, Mention..."
-                  onChange={(e) => setResultatFinale(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-
-
 
           <div className="form-row" style={{ marginTop: '16px' }}>
             <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center' }}>
