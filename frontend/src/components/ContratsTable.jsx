@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axios from "../utils/axiosConfig";
 import "./Table.css";
 
 function ContratsTable() {
@@ -14,7 +14,7 @@ function ContratsTable() {
   const fetchContrats = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/contrats/');
+      const response = await axios.get('contrats/');
       setContrats(response.data);
     } catch (err) {
       setError(err.message || "Erreur lors du chargement des contrats");

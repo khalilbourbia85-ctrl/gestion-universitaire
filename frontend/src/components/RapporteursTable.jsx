@@ -57,18 +57,12 @@ function RapporteursTable({ rapporteurs, onEdit, onDelete, filterBy = ['Tous les
               {filterBy.includes('Tous les champs') && <td style={{ fontWeight: 600, textAlign: 'center' }}>{encOk}</td>}
               {filterBy.includes('Tous les champs') && <td style={{ fontWeight: 600, textAlign: 'center' }}>{rapOk}</td>}
               <td>
-                {!rapporteur.syncedFromEnseignant ? (
-                  <>
-                    <span className="icon edit-icon" onClick={() => onEdit(rapporteur)}>
-                      ✏️
-                    </span>
-                    <span className="icon delete-icon" onClick={() => onDelete(rapporteur.matricule)}>
-                      🗑️
-                    </span>
-                  </>
-                ) : (
-                  <span style={{ color: '#64748b', fontSize: '13px' }} title="Fiche enseignant : modifiez l’encadrant">
-                    Liste dérivée
+                <span className="icon edit-icon" onClick={() => onEdit(rapporteur)}>
+                  ✏️
+                </span>
+                {!rapporteur.syncedFromEnseignant && (
+                  <span className="icon delete-icon" onClick={() => onDelete(rapporteur.matricule)}>
+                    🗑️
                   </span>
                 )}
               </td>

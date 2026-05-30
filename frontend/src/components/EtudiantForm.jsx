@@ -3,24 +3,36 @@ import "./EtudiantForm.css";
 
 function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites = [] }) {
 
+  // Fonction pour obtenir la date d'aujourd'hui au format YYYY-MM-DD
+  const getTodayDate = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const todayDate = getTodayDate();
+  const [dateErrors, setDateErrors] = useState({});
   const [form, setForm] = useState({
-    idEtudiant: "",
-    cin: "",
-    nom: "",
-    prenom: "",
-    email: "",
-    numTel: "",
-    dateNaissance: "",
-    adresse: "",
-    nationalite: "",
-    passport: "",
-    groupe: "",
-    situation_s5: "N",
-    situation_pfe: "N",
-    licence: "",
-    specialite: "",
-    genre: "M",
-  });
+  idEtudiant: "",
+  cin: "",
+  nom_fr: "",
+  prenom_fr: "",
+  email: "",
+  numTel: "",
+  dateNaissance: "",
+  adresse: "",
+  nationalite: "",
+  passport: "",
+  groupe: "",
+  situation_s5: "N",
+  situation_pfe: "N",
+  licence: "",
+  specialite: "",
+  genre: "M",
+  age: "",
+});
 
   useEffect(() => {
 
@@ -30,8 +42,8 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
       setForm({
         idEtudiant: selected.idEtudiant || "",
         cin: selected.cin || "",
-        nom: selected.nom || "",
-        prenom: selected.prenom || "",
+        nom_fr: selected.nom_fr || "",
+        prenom_fr: selected.prenom_fr || "",
         email: selected.email || "",
         numTel: selected.numTel || "",
         dateNaissance: selected.dateNaissance || "",
@@ -39,8 +51,8 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
         nationalite: selected.nationalite || "",
         passport: selected.passport || "",
         groupe: selected.groupe || "",
-        situation_s5: selected.situation_s5 || "N",
-        situation_pfe: selected.situation_pfe || "N",
+        situation_s5: String(selected.situation_s5 || "N"),
+        situation_pfe: String(selected.situation_pfe || "N"),
         licence:
           selected.licence != null && selected.licence !== ""
             ? String(selected.licence)
@@ -61,8 +73,8 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
       setForm({
         idEtudiant: "",
         cin: "",
-        nom: "",
-        prenom: "",
+        nom_fr: "",
+        prenom_fr: "",
         email: "",
         numTel: "",
         dateNaissance: "",
@@ -89,16 +101,16 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
   const cleanFormData = (data) => ({
     ...data,
     cin: String(data.cin || "").replace(/\D/g, ""),
-    nom: normalizeSpaces(data.nom),
-    prenom: normalizeSpaces(data.prenom),
+    nom_fr: normalizeSpaces(data.nom_fr),
+    prenom_fr: normalizeSpaces(data.prenom_fr),
     email: String(data.email || "").trim().toLowerCase(),
     numTel: String(data.numTel || "").replace(/\D/g, ""),
     adresse: normalizeSpaces(data.adresse),
     nationalite: normalizeSpaces(data.nationalite),
     passport: String(data.passport || "").trim(),
     groupe: normalizeSpaces(data.groupe),
-    situation_s5: data.situation_s5 || "N",
-    situation_pfe: data.situation_pfe || "N",
+    situation_s5: String(data.situation_s5 || "N"),
+    situation_pfe: String(data.situation_pfe || "N"),
     dateNaissance: String(data.dateNaissance || "").trim(),
     genre: data.genre || "M",
     licence:
@@ -112,7 +124,34 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
   });
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    // Validation de la date de naissance
+    if (name === 'dateNaissance') {
+      if (value && value > todayDate) {
+        setDateErrors((prev) => ({
+          ...prev,
+          dateNaissance: "La date de naissance ne peut pas être dans le futur"
+        }));
+      } else {
+        setDateErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.dateNaissance;
+          return newErrors;
+        });
+      }
+    }
+    
+    // Validation spéciale pour les selects situation_s5 et situation_pfe
+    if (name === 'situation_s5' || name === 'situation_pfe') {
+      if (value !== 'N' && value !== 'R') {
+        console.warn(`Invalid situation value: ${value}, using "N" as default`);
+        setForm({ ...form, [name]: 'N' });
+        return;
+      }
+    }
+    
+    setForm({ ...form, [name]: value });
   };
 
   const handleLicenceChange = (e) => {
@@ -166,7 +205,7 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
     }
   
   
-    if (!/^[a-zA-ZÀ-ÿ\s-]+$/.test(cleanedForm.nom)) {
+    if (!/^[a-zA-ZÀ-ÿ\s-]+$/.test(cleanedForm.nom_fr)) {
   
       alert("Nom invalide");
   
@@ -175,7 +214,7 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
     }
   
   
-    if (!/^[a-zA-ZÀ-ÿ\s-]+$/.test(cleanedForm.prenom)) {
+    if (!/^[a-zA-ZÀ-ÿ\s-]+$/.test(cleanedForm.prenom_fr)) {
   
       alert("Prénom invalide");
   
@@ -224,6 +263,13 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
       return;
   
     }
+
+    // Validation date de naissance
+    if (cleanedForm.dateNaissance && cleanedForm.dateNaissance > todayDate) {
+      alert("La date de naissance ne peut pas être dans le futur");
+      setDateErrors({ dateNaissance: "La date de naissance ne peut pas être dans le futur" });
+      return;
+    }
   
   
     try {
@@ -255,8 +301,8 @@ required
         <div className="input-group">
           <label>Nom</label>
           <input
-name="nom"
-value={form.nom}
+name="nom_fr"
+value={form.nom_fr}
 onChange={handleChange}
 placeholder="-"
 required
@@ -266,8 +312,8 @@ required
         <div className="input-group">
           <label>Prénom</label>
           <input
-name="prenom"
-value={form.prenom}
+name="prenom_fr"
+value={form.prenom_fr}
 onChange={handleChange}
 required
 />
@@ -304,7 +350,19 @@ required
 
         <div className="input-group">
           <label>Date naissance</label>
-          <input type="date" name="dateNaissance" value={form.dateNaissance} onChange={handleChange} />
+          <input 
+            type="date" 
+            name="dateNaissance" 
+            value={form.dateNaissance} 
+            onChange={handleChange}
+            max={todayDate}
+            title="La date de naissance ne peut pas être dans le futur"
+          />
+          {dateErrors.dateNaissance && (
+            <span style={{ color: 'red', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+              ⚠️ {dateErrors.dateNaissance}
+            </span>
+          )}
         </div>
 
         <div className="input-group">
@@ -336,6 +394,7 @@ onChange={handleChange}
 placeholder="-"
 />
         </div>
+        
 
         <div className="input-group">
           <label>Situation Semestre 5</label>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 
-/** IDs étudiants liés à un PFE (réponse API : etudiants_detail et/ou etudiants). */
+// Extrait les IDs étudiants depuis un PFE (gère plusieurs formats d'API).
 function collectEtudiantIdsFromPfe(p) {
   const ids = [];
   if (Array.isArray(p?.etudiants_detail)) {
@@ -23,7 +23,9 @@ function collectEtudiantIdsFromPfe(p) {
   return ids;
 }
 
+// Formulaire pour créer ou modifier un PFE.
 function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], licences = [], onCancel, onSubmit }) {
+  // Champs du formulaire pour le PFE
   const [sujet, setSujet] = useState('');
   const [duree, setDuree] = useState('');
   const [lieu_stage, setLieu_stage] = useState('');
@@ -31,11 +33,13 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
   const [specialite, setSpecialite] = useState('');
   const [typeProjet, setTypeProjet] = useState('');
   const [encadrant, setEncadrant] = useState('');
+  // Gestion des étudiants sélectionnés et messages d'erreur
   const [selectedEtudiants, setSelectedEtudiants] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
   const [rulesAccepted, setRulesAccepted] = useState(false);
 
+  // Charger les données du PFE lors de l'édition.
   useEffect(() => {
     if (pfe) {
       setSujet(pfe.sujet || '');
@@ -90,6 +94,7 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
     }
   }, [pfe, specialites, etudiants]);
 
+  // Identifier les étudiants déjà assignés à d'autres PFEs.
   const currentPfeId = pfe?.idPfe ?? null;
   const etudiantsDejaPfeAilleurs = useMemo(() => {
     const s = new Set();
@@ -100,19 +105,23 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
     return s;
   }, [pfes, currentPfeId]);
 
+  // Valider et soumettre le formulaire.
   const handleSave = (event) => {
     event.preventDefault();
 
+    // Vérifier que tous les champs obligatoires sont remplis.
     if (!sujet.trim() || !duree || !specialite.trim()) {
       setErrorMessage('Veuillez remplir tous les champs obligatoires (Sujet, Durée, Spécialité).');
       return;
     }
 
+    // Vérifier que 1-2 étudiants sont sélectionnés.
     if (selectedEtudiants.length < 1 || selectedEtudiants.length > 2) {
       setErrorMessage('Un PFE doit contenir 1 ou 2 étudiants.');
       return;
     }
 
+    // Vérifier l'acceptation des règles.
     if (!rulesAccepted) {
       setErrorMessage('Vous devez accepter les règles du PFE pour continuer.');
       return;
@@ -120,6 +129,7 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
 
     setErrorMessage('');
 
+    // Construire et envoyer les données du PFE.
     onSubmit({
       sujet: sujet.trim(),
       duree: Number(duree),
@@ -132,22 +142,25 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
     });
   };
 
+  // Gérer la sélection/désélection des étudiants.
   const handleStudentChange = (event) => {
     const value = Number(event.target.value);
     const isSelected = selectedEtudiants.includes(value);
     let next = [];
 
+    // Ajouter ou retirer l'étudiant de la sélection.
     if (isSelected) {
       next = selectedEtudiants.filter((item) => item !== value);
     } else {
       next = [...selectedEtudiants, value];
     }
 
+    // Permettre max 2 étudiants et auto-remplir licence/spécialité.
     if (next.length <= 2) {
       setSelectedEtudiants(next);
       setErrorMessage('');
 
-      // Auto-fill licence et specialite en fonction du premier étudiant
+      // Auto-remplir la licence et spécialité basé sur le premier étudiant.
       if (next.length > 0) {
         const firstStudent = etudiants.find((e) => String(e.idEtudiant) === String(next[0]) || String(e.id) === String(next[0]));
         if (firstStudent) {
@@ -169,12 +182,14 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
     }
   };
 
+  // Rendu du formulaire modal.
   return (
     <div className="modal-overlay">
       <div className="modal-content">
         <h3>{pfe ? 'Modifier le PFE' : 'Ajouter un nouveau PFE'}</h3>
         {errorMessage && <div className="success-message" style={{ background: '#e53e3e' }}>{errorMessage}</div>}
         <form onSubmit={handleSave}>
+          {/* Sélection des étudiants */}
           <div className="form-row">
             <label>Étudiants *</label>
             <div style={{ marginBottom: '8px', fontSize: '13px', color: '#64748b' }}>
@@ -210,9 +225,9 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
                   .filter((etudiant) => {
                     const searchLower = studentSearch.toLowerCase();
                     return (
-                      etudiant.nom.toLowerCase().includes(searchLower) ||
-                      etudiant.prenom.toLowerCase().includes(searchLower) ||
-                      etudiant.cin.toLowerCase().includes(searchLower)
+                      (etudiant.nom_fr || etudiant.nom || '').toLowerCase().includes(searchLower) ||
+                      (etudiant.prenom_fr || etudiant.prenom || '').toLowerCase().includes(searchLower) ||
+                      (etudiant.cin || '').toLowerCase().includes(searchLower)
                     );
                   })
                   .slice(0, 10)
@@ -234,7 +249,7 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
                           onChange={handleStudentChange}
                           disabled={prisAilleurs}
                         />
-                        {etudiant.nom} {etudiant.prenom} ({etudiant.cin})
+                        {etudiant.nom_fr || etudiant.nom} {etudiant.prenom_fr || etudiant.prenom} ({etudiant.cin})
                         {prisAilleurs && (
                           <span style={{ color: '#94a3b8', marginLeft: '6px' }}>
                             — déjà un PFE (un seul encadrant)
@@ -246,9 +261,9 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
                 {etudiants.filter((etudiant) => {
                   const searchLower = studentSearch.toLowerCase();
                   return (
-                    etudiant.nom.toLowerCase().includes(searchLower) ||
-                    etudiant.prenom.toLowerCase().includes(searchLower) ||
-                    etudiant.cin.toLowerCase().includes(searchLower)
+                    (etudiant.nom_fr || etudiant.nom || '').toLowerCase().includes(searchLower) ||
+                    (etudiant.prenom_fr || etudiant.prenom || '').toLowerCase().includes(searchLower) ||
+                    (etudiant.cin || '').toLowerCase().includes(searchLower)
                   );
                 }).length === 0 && (
                     <div style={{ padding: '8px', color: '#64748b', fontStyle: 'italic' }}>
@@ -258,18 +273,18 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
                 {etudiants.filter((etudiant) => {
                   const searchLower = studentSearch.toLowerCase();
                   return (
-                    etudiant.nom.toLowerCase().includes(searchLower) ||
-                    etudiant.prenom.toLowerCase().includes(searchLower) ||
-                    etudiant.cin.toLowerCase().includes(searchLower)
+                    (etudiant.nom_fr || etudiant.nom || '').toLowerCase().includes(searchLower) ||
+                    (etudiant.prenom_fr || etudiant.prenom || '').toLowerCase().includes(searchLower) ||
+                    (etudiant.cin || '').toLowerCase().includes(searchLower)
                   );
                 }).length > 10 && (
                     <div style={{ padding: '8px', color: '#64748b', fontSize: '12px', fontStyle: 'italic' }}>
                       ... et {etudiants.filter((etudiant) => {
                         const searchLower = studentSearch.toLowerCase();
                         return (
-                          etudiant.nom.toLowerCase().includes(searchLower) ||
-                          etudiant.prenom.toLowerCase().includes(searchLower) ||
-                          etudiant.cin.toLowerCase().includes(searchLower)
+                          (etudiant.nom_fr || etudiant.nom || '').toLowerCase().includes(searchLower) ||
+                          (etudiant.prenom_fr || etudiant.prenom || '').toLowerCase().includes(searchLower) ||
+                          (etudiant.cin || '').toLowerCase().includes(searchLower)
                         );
                       }).length - 10} autres résultats
                     </div>
@@ -284,6 +299,7 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
             </div>
           </div>
 
+          {/* Champs de base du PFE */}
           <div className="form-row">
             <label>Sujet</label>
             <textarea
@@ -316,6 +332,7 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
             />
           </div>
 
+          {/* Sélection de la spécialité et encadrant */}
           <div className="form-row">
             <label>Spécialité</label>
             <select
@@ -344,6 +361,7 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
             />
           </div>
 
+          {/* Encadrant optionnel */}
           <div className="form-row">
             <label>Encadrant (Optionnel)</label>
             <select value={encadrant} onChange={(e) => setEncadrant(e.target.value)}>
@@ -356,6 +374,7 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
             </select>
           </div>
 
+          {/* Acceptation des règles du PFE */}
           <div className="form-row" style={{ marginTop: '16px' }}>
             <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center' }}>
               <input
@@ -377,6 +396,7 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
             </div>
           </div>
 
+          {/* Boutons d'action */}
           <div className="buttons-area">
             <button type="submit" className="btn">
               Enregistrer

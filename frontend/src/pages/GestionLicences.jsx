@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import axios from "../utils/axiosConfig";
 import LicenceForm from '../components/LicenceForm';
 import LicenceTable from '../components/LicenceTable';
 import MultiSelectDropdown from "../components/MultiSelectDropdown";
@@ -21,7 +21,7 @@ const GestionLicences = () => {
 
   const fetchLicences = async () => {
     try {
-      const response = await axios.get('/api/licences/');
+      const response = await axios.get('licences/');
       setLicences(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement des licences:', error);
@@ -32,7 +32,7 @@ const GestionLicences = () => {
 
   const fetchDepartements = async () => {
     try {
-      const response = await axios.get('/api/departements/');
+      const response = await axios.get('departements/');
       setDepartements(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement des départements:', error);
@@ -86,11 +86,11 @@ const GestionLicences = () => {
   const handleAdd = async (formData) => {
     try {
       if (selectedLicence) {
-        await axios.put(`/api/licences/${selectedLicence.id}/`, formData);
+        await axios.put(`licences/${selectedLicence.id}/`, formData);
         setMessage('Licence mise à jour avec succès !');
         setError('');
       } else {
-        await axios.post('/api/licences/', formData);
+        await axios.post('licences/', formData);
         setMessage('Licence ajoutée avec succès !');
         setError('');
       }
@@ -112,7 +112,7 @@ const GestionLicences = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette licence ?')) {
       try {
-        await axios.delete(`/api/licences/${id}/`);
+        await axios.delete(`licences/${id}/`);
         setMessage('Licence supprimée avec succès !');
         setError('');
         fetchLicences();
@@ -135,24 +135,37 @@ const GestionLicences = () => {
     try {
       const data = await parseFile(file);
 
-      const normalizeHeader = (header) =>
-        String(header)
+      const getNormalizedKey = (field) => {
+        const norm = String(field)
           .trim()
           .toLowerCase()
           .replace(/\s+/g, " ")
           .replace(/[^a-z0-9 ]/g, "");
 
+        if (norm.includes("nom") || norm.includes("mention") || norm.includes("licence") || norm.includes("intitule")) {
+          return "nom";
+        }
+        if (norm.includes("code") || norm.includes("identifiant")) {
+          return "code";
+        }
+        if (norm.includes("domaine")) {
+          return "domaine";
+        }
+        if (norm.includes("parcours")) {
+          return "parcours";
+        }
+        if (norm.includes("departement") || norm.includes("dep")) {
+          return "departement";
+        }
+        return null;
+      };
+
       const importedData = data.map(row => {
         return Object.keys(row).reduce((acc, key) => {
-          const normKey = normalizeHeader(key);
-          let finalKey = normKey;
-          if (normKey === 'nom' || normKey === 'mention') finalKey = 'nom';
-          if (normKey === 'code' || normKey === 'identifiant') finalKey = 'code';
-          if (normKey === 'domaine') finalKey = 'domaine';
-          if (normKey === 'parcours') finalKey = 'parcours';
-          if (normKey === 'departement' || normKey === 'département') finalKey = 'departement'; // this usually expects an ID, but backend handles it or it's a separate process... let's just use it
-          
-          acc[finalKey] = row[key];
+          const finalKey = getNormalizedKey(key);
+          if (finalKey) {
+            acc[finalKey] = row[key];
+          }
           return acc;
         }, {});
       });
@@ -162,10 +175,38 @@ const GestionLicences = () => {
         return;
       }
 
+      const cleanedData = importedData.map(record => {
+        const cleanRec = { ...record };
+        if (cleanRec.departement) {
+          const parsedDep = Number(cleanRec.departement);
+          if (!isNaN(parsedDep)) {
+            cleanRec.departement = parsedDep;
+          } else {
+            const cleanDepStr = String(cleanRec.departement).trim().toLowerCase();
+            const matchedDep = departements.find(
+              (d) =>
+                String(d.code || "").trim().toLowerCase() === cleanDepStr ||
+                String(d.nom || "").trim().toLowerCase() === cleanDepStr
+            );
+            if (matchedDep) {
+              cleanRec.departement = matchedDep.id;
+            } else {
+              delete cleanRec.departement;
+            }
+          }
+        }
+        return cleanRec;
+      }).filter(record => record.nom && record.departement);
+
+      if (!cleanedData.length) {
+        setError("Aucune ligne valide avec un département correspondant n'a été trouvée.");
+        return;
+      }
+
       let successCount = 0;
-      for (const record of importedData) {
+      for (const record of cleanedData) {
         try {
-          await axios.post('/api/licences/', record);
+          await axios.post('licences/', record);
           successCount++;
         } catch (itemErr) {
           console.error(`Erreur lors de l'import:`, itemErr);

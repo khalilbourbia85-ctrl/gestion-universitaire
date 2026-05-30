@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from "../utils/axiosConfig";
 import * as XLSX from 'xlsx';
 import './GestionEtudiants.css';
 
@@ -30,11 +30,11 @@ const GestionAffectationsAcademiques = () => {
   const fetchData = async () => {
     try {
       const [elementsRes, modulesRes, enseignantsRes, licencesRes, specialitesRes] = await Promise.all([
-        axios.get('/api/ue-elements/'),
-        axios.get('/api/modules/'),
-        axios.get('/api/enseignants/'),
-        axios.get('/api/licences/'),
-        axios.get('/api/specialites/')
+        axios.get('ue-elements/'),
+        axios.get('modules/'),
+        axios.get('enseignants/'),
+        axios.get('licences/'),
+        axios.get('specialites/')
       ]);
       setElements(elementsRes.data);
       setModules(modulesRes.data);
@@ -66,7 +66,7 @@ const GestionAffectationsAcademiques = () => {
 
   const fetchAffectations = async (ueElementId) => {
     try {
-      const res = await axios.get(`/api/affectations-details/?ue_element=${ueElementId}`);
+      const res = await axios.get(`affectations-details/?ue_element=${ueElementId}`);
       setAffectations(res.data);
     } catch (err) {
       console.error(err);
@@ -119,7 +119,7 @@ const GestionAffectationsAcademiques = () => {
   const handleDelete = async (element) => {
     if (!window.confirm('Supprimer cette matière ?')) return;
     try {
-      await axios.delete(`/api/ue-elements/${element.id}/`);
+      await axios.delete(`ue-elements/${element.id}/`);
       setMessage('Matière supprimée avec succès.');
       setError('');
       fetchData();
@@ -153,10 +153,10 @@ const GestionAffectationsAcademiques = () => {
 
     try {
       if (selectedElement?.id) {
-        await axios.put(`/api/ue-elements/${selectedElement.id}/`, payload);
+        await axios.put(`ue-elements/${selectedElement.id}/`, payload);
         setMessage('Matière mise à jour.');
       } else {
-        await axios.post('/api/ue-elements/', payload);
+        await axios.post('ue-elements/', payload);
         setMessage('Matière ajoutée.');
       }
       setError('');
@@ -173,7 +173,7 @@ const GestionAffectationsAcademiques = () => {
     try {
       const existing = affectations.find(a => a.type_cours === type_cours && a.groupe === groupe);
       if (!enseignantId) {
-        if (existing) await axios.delete(`/api/affectations-details/${existing.id}/`);
+        if (existing) await axios.delete(`affectations-details/${existing.id}/`);
       } else {
         const payload = {
           ue_element: activeElementForAssign.id,
@@ -182,9 +182,9 @@ const GestionAffectationsAcademiques = () => {
           groupe
         };
         if (existing) {
-          await axios.put(`/api/affectations-details/${existing.id}/`, payload);
+          await axios.put(`affectations-details/${existing.id}/`, payload);
         } else {
-          await axios.post('/api/affectations-details/', payload);
+          await axios.post('affectations-details/', payload);
         }
       }
       fetchAffectations(activeElementForAssign.id);

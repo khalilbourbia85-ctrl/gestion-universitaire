@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import axios from "../utils/axiosConfig";
 import EnseignantsTable from "../components/EnseignantsTable";
 import EnseignantForm from "../components/EnseignantsForm";
 import MultiSelectDropdown from "../components/MultiSelectDropdown";
@@ -11,16 +11,28 @@ import DiplomesEnseignant from "../components/DiplomesEnseignant";
 import ContratsEnseignant from "../components/ContratsEnseignant";
 
 function GestionEnseignants() {
+  // État principal - liste des enseignants
   const [enseignants, setEnseignants] = useState([]);
+  // Enseignant actuellement sélectionné pour édition
   const [selected, setSelected] = useState(null);
+  // Données du formulaire actuel
   const [currentForm, setCurrentForm] = useState(null);
+  // Affichage du modal du formulaire
   const [showForm, setShowForm] = useState(false);
+  // État de chargement des données
   const [loading, setLoading] = useState(false);
+  // Message de succès temporaire
   const [successMessage, setSuccessMessage] = useState("");
+  // Message d'erreur
   const [errorMessage, setErrorMessage] = useState("");
+  // Terme de recherche pour filtrer
   const [searchTerm, setSearchTerm] = useState("");
+  // Champs sur lesquels filtrer la recherche
   const [filterBy, setFilterBy] = useState(["Tous les champs"]);
+  // Onglet actif (informations, diplômes, contrats)
   const [activeTab, setActiveTab] = useState("informations");
+  // Ensemble des matricules sélectionnés pour opérations batch
+  const [selectedEnseignants, setSelectedEnseignants] = useState(new Set());
 
   const fileRef = useRef(null);
 
@@ -28,7 +40,7 @@ function GestionEnseignants() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/enseignants/');
+      const response = await axios.get('enseignants/');
       setEnseignants(Array.isArray(response.data) ? response.data : []);
       console.log('Loaded enseignants:', response.data);
       setErrorMessage('');
@@ -45,6 +57,7 @@ function GestionEnseignants() {
     loadData();
   }, []);
 
+  // Initialiser un formulaire vide avec tous les champs
   const createEmptyForm = () => ({
     matricule: "",
     cin: "",
@@ -76,6 +89,7 @@ function GestionEnseignants() {
     }
   });
 
+  // Créer ou modifier un enseignant avec gestion d'erreur complète
   const handleAddOrUpdate = async (enseignant) => {
     try {
       const payload = {
@@ -106,11 +120,12 @@ function GestionEnseignants() {
 
       console.log('Sending payload:', payload);
 
+      // PUT pour modification, POST pour création
       let response;
       if (selected) {
-        response = await axios.put(`/api/enseignants/${selected.matricule}/`, payload);
+        response = await axios.put(`enseignants/${selected.matricule}/`, payload);
       } else {
-        response = await axios.post('/api/enseignants/', payload);
+        response = await axios.post('enseignants/', payload);
       }
 
       console.log('Response data:', response.data);
@@ -126,6 +141,7 @@ function GestionEnseignants() {
       
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
+      // Gérer les différents formats d'erreur de l'API
       let errorMsg = 'Erreur lors de l\'enregistrement';
       const responseData = err?.response?.data;
       if (typeof responseData === 'string') {
@@ -145,10 +161,11 @@ function GestionEnseignants() {
     }
   };
 
+  // Supprimer un enseignant après confirmation
   const handleDelete = async (matricule) => {
     if (!window.confirm("Voulez-vous vraiment supprimer cet enseignant ?")) return;
     try {
-      await axios.delete(`/api/enseignants/${matricule}/`);
+      await axios.delete(`enseignants/${matricule}/`);
       setSuccessMessage("Enseignant supprimé avec succès");
       setErrorMessage('');
       loadData();
@@ -158,8 +175,74 @@ function GestionEnseignants() {
     setTimeout(() => setSuccessMessage(""), 3000);
   };
 
+  // Basculer la sélection d'un enseignant individuel
+  const toggleEnseignantSelection = (matricule) => {
+    const newSelected = new Set(selectedEnseignants);
+    if (newSelected.has(matricule)) {
+      newSelected.delete(matricule);
+    } else {
+      newSelected.add(matricule);
+    }
+    setSelectedEnseignants(newSelected);
+  };
+
+  // Sélectionner/désélectionner tous les enseignants filtrés
+  const selectAllEnseignants = () => {
+    if (selectedEnseignants.size === filteredEnseignants.length) {
+      setSelectedEnseignants(new Set());
+    } else {
+      setSelectedEnseignants(new Set(filteredEnseignants.map(e => e.matricule)));
+    }
+  };
+
+  // Supprimer plusieurs enseignants sélectionnés avec Promise.all()
+  const handleDeleteMultiple = async () => {
+    if (selectedEnseignants.size === 0) {
+      setErrorMessage("Veuillez sélectionner au moins un enseignant");
+      return;
+    }
+
+    const confirmMsg = selectedEnseignants.size === 1 
+      ? "Voulez-vous supprimer cet enseignant ?" 
+      : `Voulez-vous vraiment supprimer ${selectedEnseignants.size} enseignants ?`;
+    
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      setErrorMessage("");
+      setLoading(true);
+      
+      // Supprimer en parallèle avec Promise.all
+      const deletePromises = Array.from(selectedEnseignants).map(matricule =>
+        axios.delete(`enseignants/${matricule}/`)
+      );
+      
+      await Promise.all(deletePromises);
+      
+      setSuccessMessage(`${selectedEnseignants.size} enseignant(s) supprimé(s) avec succès`);
+      setSelectedEnseignants(new Set());
+      
+      // Reload data
+      await loadData();
+      
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err) {
+      const message = err.response?.data?.detail ||
+                     err.response?.data?.message ||
+                     err.message ||
+                     "Erreur lors de la suppression";
+      setErrorMessage(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Déclencher le dialogue d'import de fichier
   const handleImportClick = () => fileRef.current.click();
 
+
+
+  // Importer les enseignants depuis un fichier Excel/CSV avec validation et mappage intelligent
   const handleImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -167,6 +250,7 @@ function GestionEnseignants() {
     try {
       const data = await parseFile(file);
       
+      // Normaliser les en-têtes et mapper automatiquement les colonnes
       const normalizeHeader = (header) =>
         String(header)
           .trim()
@@ -178,38 +262,59 @@ function GestionEnseignants() {
         return Object.keys(row).reduce((acc, key) => {
           const normKey = normalizeHeader(key);
           let finalKey = normKey;
-          if (normKey === 'numtel' || normKey === 'num tel' || normKey === 'telephone') finalKey = 'numTel';
-          if (normKey === 'daterecrutement' || normKey === 'date recrutement') finalKey = 'dateRecrutement';
-          if (normKey === 'typecontrat' || normKey === 'type contrat') finalKey = 'typeContrat';
-          if (normKey === 'datetitularisation' || normKey === 'date titularisation') finalKey = 'dateTitularisation';
-          if (normKey === 'statutadministratif' || normKey === 'statut administratif') finalKey = 'statutAdministratif';
+          
+          if (normKey.includes("prenom")) finalKey = "prenom";
+          else if (normKey.includes("nom")) finalKey = "nom";
+          else if (normKey.includes("matricule") || normKey.includes("mat")) finalKey = "matricule";
+          else if (normKey.includes("cin") || normKey.includes("cni")) finalKey = "cin";
+          else if (normKey.includes("email") || normKey.includes("mail")) finalKey = "email";
+          else if (normKey.includes("tel") || normKey.includes("phone") || normKey.includes("portable") || normKey.includes("telephone")) finalKey = "numTel";
+          else if (normKey.includes("grade") || normKey.includes("classe")) finalKey = "grade";
+          else if (normKey.includes("recrutement") || normKey.includes("recrut")) finalKey = "dateRecrutement";
+          else if (normKey.includes("statut") || normKey.includes("administratif")) finalKey = "statutAdministratif";
+          else if (normKey.includes("contrat")) finalKey = "typeContrat";
+          else if (normKey.includes("titularisation")) finalKey = "dateTitularisation";
           
           acc[finalKey] = row[key];
           return acc;
         }, {});
       });
 
+      // Extraire uniquement les chiffres (pour CIN, téléphone)
+      const cleanDigits = (value) => {
+        if (value === null || value === undefined) return "";
+        let strVal = String(value).trim();
+        if (strVal.includes(".")) {
+          const parts = strVal.split(".");
+          if (parts[1] === "" || /^0+$/.test(parts[1])) {
+            strVal = parts[0];
+          }
+        }
+        return strVal.replace(/\D/g, "");
+      };
+
       const cleanedData = importedData
         .map((item) => ({
-          matricule: item.matricule,
-          cin: item.cin,
+          matricule: item.matricule ? String(item.matricule).split('.')[0].trim() : "",
+          cin: cleanDigits(item.cin),
           nom: item.nom,
           prenom: item.prenom,
           email: item.email,
-          numtel: item.numTel || item.numtel,
+          numtel: cleanDigits(item.numTel || item.numtel),
           grade: item.grade,
           dateRecrutement: item.dateRecrutement,
           statutAdministratif: item.statutAdministratif,
         }))
         .filter((item) => item.matricule && item.nom && item.prenom);
 
-      // Envoi des données parsées à l'API
+      // Importer chaque ligne avec gestion d'erreur individuelle
       let successCount = 0;
       for (const item of cleanedData) {
         try {
-          await axios.post('/api/enseignants/', item);
+          await axios.post('enseignants/', item);
           successCount++;
         } catch (itemErr) {
+          // Continuer les autres importe même en cas d'erreur
           console.error(`Erreur pour ${item.matricule}:`, itemErr);
         }
       }
@@ -227,7 +332,7 @@ function GestionEnseignants() {
     }
   };
 
-  // Filtrage
+  // Filtrer les enseignants selon le terme de recherche et les champs sélectionnés
   const filteredEnseignants = enseignants.filter((e) => {
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
@@ -296,6 +401,7 @@ function GestionEnseignants() {
               <button onClick={handleImportClick} className="btn import-btn">
                 Importer fichier
               </button>
+
               <button
                 className="btn"
                 onClick={() => {
@@ -306,6 +412,24 @@ function GestionEnseignants() {
               >
                 Nouvel enseignant
               </button>
+              <button
+                className="btn"
+                type="button"
+                onClick={selectAllEnseignants}
+                style={{ backgroundColor: selectedEnseignants.size === filteredEnseignants.length && filteredEnseignants.length > 0 ? '#10b981' : '#3b82f6' }}
+              >
+                {selectedEnseignants.size === filteredEnseignants.length && filteredEnseignants.length > 0 ? '✓ Tous sélectionnés' : '☐ Sélectionner tous'}
+              </button>
+              {selectedEnseignants.size > 0 && (
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={handleDeleteMultiple}
+                  style={{ backgroundColor: '#ef4444' }}
+                >
+                  🗑️ Supprimer {selectedEnseignants.size} sélectionné{selectedEnseignants.size > 1 ? 's' : ''}
+                </button>
+              )}
             </div>
           </div>
 
@@ -373,6 +497,8 @@ function GestionEnseignants() {
               }}
               onDelete={handleDelete}
               filterBy={filterBy}
+              selectedEnseignants={selectedEnseignants}
+              onToggleSelect={toggleEnseignantSelection}
             />
           )}
 

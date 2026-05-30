@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
+import axios from "../utils/axiosConfig";
 import SoutenancesTable from '../components/SoutenancesTable';
 import SoutenanceForm from '../components/SoutenanceForm';
 import GestionSallesModal from '../components/GestionSallesModal';
@@ -28,11 +28,11 @@ function GestionSoutenances() {
     setLoading(true);
     try {
       const [soutenanceRes, enseignantRes, etudiantRes, pfeRes, sallesRes] = await Promise.all([
-        axios.get('/api/soutenances/'),
-        axios.get('/api/enseignants/'),
-        axios.get('/api/etudiants/'),
-        axios.get('/api/pfes/'),
-        axios.get('/api/salles/')
+        axios.get('soutenances/'),
+        axios.get('enseignants/'),
+        axios.get('etudiants/'),
+        axios.get('pfes/'),
+        axios.get('salles/')
       ]);
 
       setSoutenances(Array.isArray(soutenanceRes.data) ? soutenanceRes.data : (soutenanceRes.data?.results || []));
@@ -117,10 +117,10 @@ function GestionSoutenances() {
   const handleSaveSoutenance = async (data) => {
     try {
       if (selectedSoutenance) {
-        await axios.put(`/api/soutenances/${selectedSoutenance.idSoutenance}/`, data);
+        await axios.put(`soutenances/${selectedSoutenance.idSoutenance}/`, data);
         setMessage('Soutenance modifiée avec succès.');
       } else {
-        await axios.post('/api/soutenances/', data);
+        await axios.post('soutenances/', data);
         setMessage('Soutenance ajoutée avec succès.');
       }
       handleCloseForm();
@@ -142,7 +142,7 @@ function GestionSoutenances() {
   const handleDeleteSoutenance = async (idSoutenance) => {
     if (!window.confirm('Supprimer cette soutenance ?')) return;
     try {
-      await axios.delete(`/api/soutenances/${idSoutenance}/`);
+      await axios.delete(`soutenances/${idSoutenance}/`);
       setMessage('Soutenance supprimée avec succès.');
       loadData();
     } catch (err) {
@@ -194,7 +194,7 @@ function GestionSoutenances() {
           if (record.etudiants && typeof record.etudiants === 'string') {
             record.etudiants = record.etudiants.split(';').map(id => Number(id.trim())).filter(id => !isNaN(id));
           }
-          await axios.post('/api/soutenances/', record);
+          await axios.post('soutenances/', record);
           successCount++;
         } catch (err) {
           console.error("Erreur lors de l'import:", err);

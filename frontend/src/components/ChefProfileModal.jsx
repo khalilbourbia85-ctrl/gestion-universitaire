@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import axios from "../utils/axiosConfig";
 import { FaUserTie, FaTimes, FaEdit, FaSave } from 'react-icons/fa';
 import './ChefProfileModal.css';
 
@@ -23,10 +23,10 @@ const ChefProfileModal = ({ onClose, onUpdate, departementId }) => {
       try {
         let dept = null;
         if (departementId) {
-          const response = await axios.get(`/api/departements/${departementId}/`);
+          const response = await axios.get(`departements/${departementId}/`);
           dept = response.data;
         } else {
-          const response = await axios.get('/api/departements/');
+          const response = await axios.get('departements/');
           if (response.data && response.data.length > 0) {
             dept = response.data[0];
           }
@@ -64,11 +64,7 @@ const ChefProfileModal = ({ onClose, onUpdate, departementId }) => {
         data.append('photo', photoFile);
       }
 
-      const response = await axios.patch(`/api/departements/${departement.id}/`, data, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      const response = await axios.patch(`departements/${departement.id}/`, data);
       setDepartement(response.data);
       setIsEditing(false);
       setPhotoFile(null);

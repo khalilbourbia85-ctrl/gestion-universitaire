@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 
 from rest_framework import serializers
 from .contract_rules import get_enseignant_contract_type_label
@@ -106,8 +106,18 @@ class EnseignantSerializer(serializers.ModelSerializer):
 
         if 'dateRecrutement' in data:
             data['dateRecrutement'] = self._normalize_date(data.get('dateRecrutement'))
+            # Validation: dateRecrutement ne doit pas être dans le futur
+            if data['dateRecrutement'] and isinstance(data['dateRecrutement'], date):
+                if data['dateRecrutement'] > date.today():
+                    raise serializers.ValidationError({'dateRecrutement': 'La date de recrutement ne peut pas être dans le futur.'})
+        
         if 'dateTitularisation' in data:
             data['dateTitularisation'] = self._normalize_date(data.get('dateTitularisation'))
+            # Validation: dateTitularisation ne doit pas être dans le futur
+            if data['dateTitularisation'] and isinstance(data['dateTitularisation'], date):
+                if data['dateTitularisation'] > date.today():
+                    raise serializers.ValidationError({'dateTitularisation': 'La date de titularisation ne peut pas être dans le futur.'})
+        
         if 'dateDebut' in data:
             data['dateDebut'] = self._normalize_date(data.get('dateDebut'))
         if 'dateFin' in data:
@@ -117,6 +127,10 @@ class EnseignantSerializer(serializers.ModelSerializer):
                 **data['diplome'],
                 'dateObtention': self._normalize_date(data['diplome'].get('dateObtention'))
             }
+            # Validation: dateObtention du diplôme ne doit pas être dans le futur
+            if data['diplome']['dateObtention'] and isinstance(data['diplome']['dateObtention'], date):
+                if data['diplome']['dateObtention'] > date.today():
+                    raise serializers.ValidationError({'diplome': {'dateObtention': 'La date d\'obtention du diplôme ne peut pas être dans le futur.'}})
 
         # Nettoyage des champs numériques (pour éviter "3ans" au lieu de "3")
         import re
@@ -421,8 +435,6 @@ class EnseignantSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         if value:
-            if not value.endswith('@gmail.com'):
-                raise serializers.ValidationError("L'email doit se terminer par @gmail.com.")
             queryset = Enseignant.objects.filter(email=value)
             if self.instance:
                 queryset = queryset.exclude(pk=self.instance.pk)
@@ -433,8 +445,38 @@ class EnseignantSerializer(serializers.ModelSerializer):
     def validate_numtel(self, value):
         if value:
             import re
-            if not re.match(r'^\d{8}$', value):
-                raise serializers.ValidationError("Le numéro de téléphone doit contenir exactement 8 chiffres.")
+            # Remove spaces, hyphens, and dots for validation
+            cleaned = re.sub(r'[\s\-\.\(\)]+', '', value)
+            if not re.match(r'^\d{8,}$', cleaned):
+                raise serializers.ValidationError("Le numéro de téléphone doit contenir au moins 8 chiffres.")
+            # Return cleaned version
+            return cleaned
+        return value
+
+    def validate_dateRecrutement(self, value):
+        """Validation: la date de recrutement ne doit pas être dans le futur"""
+        if value:
+            # Convert to date if needed
+            if isinstance(value, datetime):
+                value_date = value.date()
+            else:
+                value_date = value
+            
+            if value_date > date.today():
+                raise serializers.ValidationError("La date de recrutement ne peut pas être dans le futur.")
+        return value
+
+    def validate_dateTitularisation(self, value):
+        """Validation: la date de titularisation ne doit pas être dans le futur"""
+        if value:
+            # Convert to date if needed
+            if isinstance(value, datetime):
+                value_date = value.date()
+            else:
+                value_date = value
+            
+            if value_date > date.today():
+                raise serializers.ValidationError("La date de titularisation ne peut pas être dans le futur.")
         return value
 
     class Meta:

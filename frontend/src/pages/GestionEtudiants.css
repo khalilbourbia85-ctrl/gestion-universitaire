@@ -513,6 +513,9 @@ TABLE CARD
   padding: 20px;
   box-shadow: 0px 6px 18px rgba(0,0,0,0.08);
   margin-bottom: 20px;
+  width: 100%;
+  display: block;
+  overflow: hidden;
 }
 
 .card-header {
@@ -1151,4 +1154,4 @@ CHEF DE DEPARTEMENT PROFILE CARD
 .dept-profile-info strong {
   color: #1e293b;
   font-weight: 600;
-}
+}

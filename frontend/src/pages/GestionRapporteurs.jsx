@@ -1,26 +1,37 @@
 import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
+import axios from "../utils/axiosConfig";
 import RapporteursTable from '../components/RapporteursTable';
 import RapporteursForm from '../components/RapporteursForm';
 import MultiSelectDropdown from "../components/MultiSelectDropdown";
 import { parseFile } from "../utils/fileParser";
 import './GestionEtudiants.css';
 
+// Composant principal pour gérer les rapporteurs (affichage, création, modification, suppression, import)
 function GestionRapporteurs() {
+  // État principal contenant la liste des rapporteurs
   const [rapporteurs, setRapporteurs] = useState([]);
+  // Rapporteur sélectionné pour édition
   const [selectedRapporteur, setSelectedRapporteur] = useState(null);
+  // Affichage du formulaire modal
   const [showForm, setShowForm] = useState(false);
+  // Terme de recherche saisi par l'utilisateur
   const [searchTerm, setSearchTerm] = useState('');
+  // Champs sur lesquels filtrer la recherche
   const [filterBy, setFilterBy] = useState(['Tous les champs']);
+  // Message de succès
   const [message, setMessage] = useState('');
+  // Message d'erreur
   const [error, setError] = useState('');
+  // État de chargement des données
   const [loading, setLoading] = useState(true);
+  // Référence pour l'input fichier caché
   const fileRef = useRef(null);
 
+  // Récupère la liste des rapporteurs depuis l'API
   const loadData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/rapporteurs/');
+      const response = await axios.get('rapporteurs/');
       setRapporteurs(Array.isArray(response.data) ? response.data : []);
       setError('');
     } catch (err) {
@@ -31,10 +42,12 @@ function GestionRapporteurs() {
     }
   };
 
+  // Charge les données au montage du composant
   useEffect(() => {
     loadData();
   }, []);
 
+  // Filtre les rapporteurs selon le terme de recherche et les champs sélectionnés
   const filteredRapporteurs = rapporteurs.filter((r) => {
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
@@ -73,6 +86,7 @@ function GestionRapporteurs() {
     }
   });
 
+  // Ouvre le formulaire modal pour créer ou éditer un rapporteur
   const handleOpenForm = (rapporteur = null) => {
     setSelectedRapporteur(rapporteur);
     setShowForm(true);
@@ -80,18 +94,20 @@ function GestionRapporteurs() {
     setMessage('');
   };
 
+  // Ferme le formulaire modal
   const handleCloseForm = () => {
     setSelectedRapporteur(null);
     setShowForm(false);
   };
 
+  // Sauvegarde un rapporteur (création ou modification) via l'API
   const handleSaveRapporteur = async (data) => {
     try {
       if (selectedRapporteur) {
-        await axios.put(`/api/rapporteurs/${selectedRapporteur.matricule}/`, data);
+        await axios.put(`rapporteurs/${selectedRapporteur.matricule}/`, data);
         setMessage('Rapporteur modifié avec succès.');
       } else {
-        await axios.post('/api/rapporteurs/', data);
+        await axios.post('rapporteurs/', data);
         setMessage('Rapporteur ajouté avec succès.');
       }
       handleCloseForm();
@@ -110,10 +126,11 @@ function GestionRapporteurs() {
     }
   };
 
+  // Supprime un rapporteur après confirmation
   const handleDeleteRapporteur = async (matricule) => {
     if (!window.confirm('Supprimer ce rapporteur ?')) return;
     try {
-      await axios.delete(`/api/rapporteurs/${matricule}/`);
+      await axios.delete(`rapporteurs/${matricule}/`);
       setMessage('Rapporteur supprimé avec succès.');
       loadData();
     } catch (err) {
@@ -121,8 +138,10 @@ function GestionRapporteurs() {
     }
   };
 
+  // Déclenche le sélecteur de fichier
   const handleImportClick = () => fileRef.current.click();
 
+  // Importe les rapporteurs depuis un fichier Excel/CSV
   const handleImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -179,7 +198,7 @@ function GestionRapporteurs() {
       let successCount = 0;
       for (const rapporteur of cleanedData) {
         try {
-          await axios.post('/api/rapporteurs/', rapporteur);
+          await axios.post('rapporteurs/', rapporteur);
           successCount++;
         } catch (itemErr) {
           console.error(`Erreur pour ${rapporteur.matricule}:`, itemErr);
@@ -196,17 +215,21 @@ function GestionRapporteurs() {
     }
   };
 
+  // Normalise les espaces multiples en espace unique
   const normalizeSpaces = (value) =>
     typeof value === "string"
       ? value.trim().replace(/\s+/g, " ")
       : value;
 
+  // Extrait uniquement les chiffres d'une chaîne
   const cleanDigits = (value) =>
     String(value || "").replace(/\D/g, "");
 
+  // Normalise un email en minuscules et sans espaces
   const cleanEmail = (value) =>
     String(value || "").trim().toLowerCase();
 
+  // Normalise un en-tête pour la comparaison (minuscules, pas d'accents, espaces simples)
   const normalizeHeader = (header) =>
     String(header)
       .trim()
@@ -214,6 +237,7 @@ function GestionRapporteurs() {
       .replace(/\s+/g, " ")
       .replace(/[^a-z0-9 ]/g, "");
 
+  // Parse une ligne CSV en tenant compte des guillemets et des séparateurs
   const parseCsvLine = (line) => {
     const parts = [];
     const regex = /(?:"([^"]*(?:""[^"]*)*)"|([^",]*))(?:,|$)/g;
@@ -226,6 +250,7 @@ function GestionRapporteurs() {
     return parts;
   };
 
+  // Parse un texte CSV en tableaux d'objets avec en-têtes
   const parseCsv = (text) => {
     const rows = text
       .split(/\r?\n/)
@@ -278,6 +303,7 @@ function GestionRapporteurs() {
     });
   };
 
+  // Interface principale : titre, messages, et contenu selon l'état de chargement
   return (
     <div className="main-container">
       <h2 className="page-title">Gestion des Rapporteurs</h2>
@@ -288,6 +314,7 @@ function GestionRapporteurs() {
         <div className="table-card">Chargement en cours...</div>
       ) : (
         <>
+          {/* Contenu principal avec zone de recherche, boutons et tableau */}
           <div className="page-container">
             <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
@@ -318,6 +345,7 @@ function GestionRapporteurs() {
               />
             </div>
 
+            {/* Boutons d'action : import et création */}
             <div className="buttons-area">
               <button onClick={handleImportClick} className="btn import-btn">
                 Importer fichier
@@ -331,6 +359,7 @@ function GestionRapporteurs() {
             </div>
           </div>
 
+          {/* Input fichier caché pour l'import */}
           <input
             type="file"
             accept=".csv,.json,.xlsx,.xls"
@@ -339,6 +368,7 @@ function GestionRapporteurs() {
             onChange={handleImport}
           />
 
+          {/* Tableau des rapporteurs avec actions */}
           <RapporteursTable
             rapporteurs={filteredRapporteurs}
             onEdit={handleOpenForm}
@@ -348,6 +378,7 @@ function GestionRapporteurs() {
         </>
       )}
 
+      {/* Modal du formulaire pour créer/éditer un rapporteur */}
       {showForm && (
         <div className="modal-overlay">
           <div className="modal-content">

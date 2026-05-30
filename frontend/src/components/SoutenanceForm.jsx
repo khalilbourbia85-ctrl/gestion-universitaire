@@ -386,6 +386,25 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
               {filteredEtudiants.length === 0 && encadrant ? 'Cet encadrant n\'a pas d\'étudiants' : ''}
               {selectedEtudiants.length === 0 ? 'Sélectionnez au moins 1 étudiant' : `${selectedEtudiants.length} étudiant(s) sélectionné(s)`}
             </div>
+            {selectedEtudiants.length > 0 && (
+              <div style={{ marginBottom: '12px', padding: '8px 12px', backgroundColor: '#e0e7ff', borderRadius: '6px', border: '1px solid #c7d2fe', display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                {selectedEtudiants.map((etudiantId) => {
+                  const etudiant = filteredEtudiants.find((e) => Number(e.idEtudiant) === Number(etudiantId));
+                  return (
+                    <span key={etudiantId} style={{ backgroundColor: '#4f46e5', color: 'white', padding: '4px 10px', borderRadius: '4px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      {etudiant ? `${etudiant.nom_fr} ${etudiant.prenom_fr}` : `Étudiant ${etudiantId}`}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedEtudiants(selectedEtudiants.filter((id) => Number(id) !== Number(etudiantId)))}
+                        style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '16px', padding: '0', display: 'flex', alignItems: 'center' }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
             {encadrant && (
               <input
                 type="text"
@@ -404,32 +423,63 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
                 }}
               />
             )}
-            <div className="checkbox-grid">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '10px', marginBottom: '12px' }}>
               {filteredEtudiants.length > 0 ? (
                 filteredEtudiants
                   .filter((etudiant) => {
                     const searchLower = studentSearch.toLowerCase();
-                    const nom = String(etudiant.nom ?? '').toLowerCase();
-                    const prenom = String(etudiant.prenom ?? '').toLowerCase();
+                    const nom = String(etudiant.nom_fr ?? '').toLowerCase();
+                    const prenom = String(etudiant.prenom_fr ?? '').toLowerCase();
                     return nom.includes(searchLower) || prenom.includes(searchLower);
                   })
-                  .map((etudiant) => (
-                  <label key={etudiant.idEtudiant} className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      value={etudiant.idEtudiant}
-                      checked={selectedEtudiants.includes(Number(etudiant.idEtudiant))}
-                      onChange={handleStudentChange}
-                      disabled={
-                        selectedEtudiants.length >= 2 &&
-                        !selectedEtudiants.includes(Number(etudiant.idEtudiant))
-                      }
-                    />
-                    {etudiant.nom} {etudiant.prenom}
-                  </label>
-                ))
+                  .map((etudiant) => {
+                    const isSelected = selectedEtudiants.includes(Number(etudiant.idEtudiant));
+                    const isDisabled = selectedEtudiants.length >= 2 && !isSelected;
+                    return (
+                      <div
+                        key={etudiant.idEtudiant}
+                        onClick={() => {
+                          if (!isDisabled) {
+                            const event = new Event('change', { bubbles: true });
+                            const input = document.querySelector(`input[value="${etudiant.idEtudiant}"]`);
+                            if (input) input.click();
+                          }
+                        }}
+                        style={{
+                          padding: '12px',
+                          border: isSelected ? '2px solid #4f46e5' : '2px solid #e2e8f0',
+                          borderRadius: '6px',
+                          cursor: isDisabled ? 'not-allowed' : 'pointer',
+                          backgroundColor: isSelected ? '#eef2ff' : '#f8fafc',
+                          opacity: isDisabled ? 0.5 : 1,
+                          transition: 'all 0.2s',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isDisabled) e.currentTarget.style.backgroundColor = isSelected ? '#e0e7ff' : '#f1f5f9';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = isSelected ? '#eef2ff' : '#f8fafc';
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          value={etudiant.idEtudiant}
+                          checked={isSelected}
+                          onChange={handleStudentChange}
+                          disabled={isDisabled}
+                          style={{ cursor: isDisabled ? 'not-allowed' : 'pointer', width: '18px', height: '18px' }}
+                        />
+                        <span style={{ fontSize: '14px', fontWeight: isSelected ? '600' : '500', color: '#1e293b' }}>
+                          {etudiant.nom_fr} {etudiant.prenom_fr}
+                        </span>
+                      </div>
+                    );
+                  })
               ) : (
-                encadrant && <p style={{ color: '#64748b', fontSize: '13px' }}>Aucun étudiant disponible pour cet encadrant</p>
+                encadrant && <p style={{ color: '#64748b', fontSize: '13px', gridColumn: '1 / -1' }}>Aucun étudiant disponible pour cet encadrant</p>
               )}
             </div>
             <div className={`student-count ${selectedEtudiants.length >= 1 ? 'valid' : 'invalid'}`}>

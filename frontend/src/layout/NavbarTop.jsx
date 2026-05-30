@@ -1,6 +1,6 @@
 import "./NavbarTop.css";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import axios from "../utils/axiosConfig";
 import { FaUserCircle } from "react-icons/fa";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import ChefProfileModal from "../components/ChefProfileModal";
@@ -14,7 +14,7 @@ function NavbarTop({ role }) {
   const fetchProfilePhoto = async () => {
     if (role === 'chef_departement') {
       try {
-        const res = await axios.get('/api/departements/');
+        const res = await axios.get('departements/');
         if (res.data && res.data.length > 0 && res.data[0].photo) {
           setDeptPhoto(res.data[0].photo);
         } else {

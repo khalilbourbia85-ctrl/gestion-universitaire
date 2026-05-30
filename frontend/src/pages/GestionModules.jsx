@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import axios from "../utils/axiosConfig";
 import ModuleForm from '../components/ModuleForm';
 import ModuleTable from '../components/ModuleTable';
 import MultiSelectDropdown from "../components/MultiSelectDropdown";
@@ -26,17 +26,18 @@ const GestionModules = () => {
 
   const fetchModules = async () => {
     try {
-      const response = await axios.get('/api/modules/');
+      const response = await axios.get('modules/');
       setModules(response.data);
+      setError('');
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors du chargement des modules');
+      setError('Erreur lors du chargement des modules');
     }
   };
 
   const fetchLicences = async () => {
     try {
-      const response = await axios.get('/api/licences/');
+      const response = await axios.get('licences/');
       setLicences(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement des licences:', error);
@@ -45,7 +46,7 @@ const GestionModules = () => {
 
   const fetchSpecialites = async () => {
     try {
-      const response = await axios.get('/api/specialites/');
+      const response = await axios.get('specialites/');
       setSpecialites(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement des spécialités:', error);
@@ -187,10 +188,10 @@ const GestionModules = () => {
   const handleAdd = async (formData) => {
     try {
       if (selectedModule) {
-        await axios.put(`/api/modules/${selectedModule.id}/`, formData);
+        await axios.put(`modules/${selectedModule.id}/`, formData);
         alert('Module mis à jour avec succès');
       } else {
-        await axios.post('/api/modules/', formData);
+        await axios.post('modules/', formData);
         alert('Module ajouté avec succès');
       }
       fetchModules();
@@ -209,7 +210,7 @@ const GestionModules = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`/api/modules/${id}/`);
+      await axios.delete(`modules/${id}/`);
       alert('Module supprimé avec succès');
       fetchModules();
     } catch (error) {
@@ -229,27 +230,49 @@ const GestionModules = () => {
     try {
       const data = await parseFile(file);
 
-      const normalizeHeader = (header) =>
-        String(header)
+      const getNormalizedKey = (field) => {
+        const norm = String(field)
           .trim()
           .toLowerCase()
           .replace(/\s+/g, " ")
           .replace(/[^a-z0-9 ]/g, "");
 
+        if (norm.includes("nom") || norm.includes("intitule") || norm.includes("module") || norm.includes("ue")) {
+          return "nom";
+        }
+        if (norm.includes("code") || norm.includes("identifiant")) {
+          return "code";
+        }
+        if (norm.includes("specialite") || norm.includes("spec")) {
+          return "specialite";
+        }
+        if (norm.includes("licence") || norm.includes("mention")) {
+          return "licence";
+        }
+        if (norm.includes("annee") || norm.includes("niveau")) {
+          return "annee";
+        }
+        if (norm.includes("semestre") || norm.includes("sem")) {
+          return "semestre";
+        }
+        if (norm.includes("cours") || norm === "c") {
+          return "volume_cours";
+        }
+        if (norm.includes("td")) {
+          return "volume_td";
+        }
+        if (norm.includes("tp")) {
+          return "volume_tp";
+        }
+        return null;
+      };
+
       const importedData = data.map(row => {
         return Object.keys(row).reduce((acc, key) => {
-          const normKey = normalizeHeader(key);
-          let finalKey = normKey;
-          if (normKey === 'nom' || normKey === 'intitule') finalKey = 'nom';
-          if (normKey === 'code' || normKey === 'identifiant') finalKey = 'code';
-          if (normKey === 'specialite' || normKey === 'spécialité') finalKey = 'specialite';
-          if (normKey === 'annee' || normKey === 'année') finalKey = 'annee';
-          if (normKey === 'semestre') finalKey = 'semestre';
-          if (normKey === 'volumecours' || normKey === 'volume cours' || normKey === 'volume_cours') finalKey = 'volume_cours';
-          if (normKey === 'volumetd' || normKey === 'volume td' || normKey === 'volume_td') finalKey = 'volume_td';
-          if (normKey === 'volumetp' || normKey === 'volume tp' || normKey === 'volume_tp') finalKey = 'volume_tp';
-          
-          acc[finalKey] = row[key];
+          const finalKey = getNormalizedKey(key);
+          if (finalKey) {
+            acc[finalKey] = row[key];
+          }
           return acc;
         }, {});
       });
@@ -259,10 +282,73 @@ const GestionModules = () => {
         return;
       }
 
+      const cleanedData = importedData.map(record => {
+        const cleanRec = { ...record };
+        
+        // 1. Normalize annee & semestre
+        if (cleanRec.annee) {
+          cleanRec.annee = normalizeYear(cleanRec.annee);
+        }
+        if (cleanRec.semestre) {
+          cleanRec.semestre = normalizeSemester(cleanRec.semestre);
+        }
+
+        // 2. Resolve Specialite (Number or Text)
+        if (cleanRec.specialite && cleanRec.specialite !== "") {
+          const parsedSpec = Number(cleanRec.specialite);
+          if (!isNaN(parsedSpec)) {
+            cleanRec.specialite = parsedSpec;
+          } else {
+            const cleanSpecStr = String(cleanRec.specialite).trim().toLowerCase();
+            const matchedSpec = specialites.find(
+              (s) =>
+                String(s.code || "").trim().toLowerCase() === cleanSpecStr ||
+                String(s.nom || "").trim().toLowerCase() === cleanSpecStr
+            );
+            if (matchedSpec) {
+              cleanRec.specialite = matchedSpec.id;
+              // If licence is missing, we can infer it from specialite!
+              if (!cleanRec.licence && matchedSpec.licence) {
+                cleanRec.licence = typeof matchedSpec.licence === 'object' ? matchedSpec.licence?.id : matchedSpec.licence;
+              }
+            } else {
+              delete cleanRec.specialite;
+            }
+          }
+        }
+
+        // 3. Resolve Licence (Number or Text)
+        if (cleanRec.licence && cleanRec.licence !== "") {
+          const parsedLicence = Number(cleanRec.licence);
+          if (!isNaN(parsedLicence)) {
+            cleanRec.licence = parsedLicence;
+          } else {
+            const cleanLicStr = String(cleanRec.licence).trim().toLowerCase();
+            const matchedLic = licences.find(
+              (l) =>
+                String(l.code || "").trim().toLowerCase() === cleanLicStr ||
+                String(l.nom || "").trim().toLowerCase() === cleanLicStr
+            );
+            if (matchedLic) {
+              cleanRec.licence = matchedLic.id;
+            } else {
+              delete cleanRec.licence;
+            }
+          }
+        }
+
+        return cleanRec;
+      }).filter(record => record.nom && record.licence && record.annee && record.semestre);
+
+      if (!cleanedData.length) {
+        setError("Aucune ligne de module valide (avec Licence, Année, Semestre correspondants) n'a été trouvée.");
+        return;
+      }
+
       let successCount = 0;
-      for (const record of importedData) {
+      for (const record of cleanedData) {
         try {
-          await axios.post('/api/modules/', record);
+          await axios.post('modules/', record);
           successCount++;
         } catch (itemErr) {
           console.error(`Erreur lors de l'import:`, itemErr);

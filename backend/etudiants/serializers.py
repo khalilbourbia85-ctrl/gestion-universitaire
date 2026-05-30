@@ -1,9 +1,9 @@
 from rest_framework import serializers
 from academique.models import Licence, Specialite
 from academique.serializers import LicenceSerializer, SpecialiteSerializer
+from datetime import date
 
 from .models import Etudiant
-
 
 class EtudiantSerializer(serializers.ModelSerializer):
     licence_detail = LicenceSerializer(source='licence', read_only=True)
@@ -18,6 +18,8 @@ class EtudiantSerializer(serializers.ModelSerializer):
         allow_null=True,
         required=False,
     )
+    # Make adresse optional for import flexibility
+    adresse = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Etudiant
@@ -26,8 +28,8 @@ class EtudiantSerializer(serializers.ModelSerializer):
             'cin',
             'passport',
             'nationalite',
-            'nom',
-            'prenom',
+            'nom_fr',
+            'prenom_fr',
             'email',
             'numTel',
             'dateNaissance',
@@ -56,8 +58,6 @@ class EtudiantSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         if value:
-            if not value.endswith('@gmail.com'):
-                raise serializers.ValidationError("L'email doit se terminer par @gmail.com.")
             queryset = Etudiant.objects.filter(email=value)
             if self.instance:
                 queryset = queryset.exclude(pk=self.instance.pk)
@@ -68,8 +68,12 @@ class EtudiantSerializer(serializers.ModelSerializer):
     def validate_numTel(self, value):
         if value:
             import re
-            if not re.match(r'^\d{8}$', value):
-                raise serializers.ValidationError("Le numéro de téléphone doit contenir exactement 8 chiffres.")
+            # Remove spaces, hyphens, and dots for validation
+            cleaned = re.sub(r'[\s\-\.\(\)]+', '', value)
+            if not re.match(r'^\d{8,}$', cleaned):
+                raise serializers.ValidationError("Le numéro de téléphone doit contenir au moins 8 chiffres.")
+            # Return cleaned version
+            return cleaned
         return value
 
     def validate_passport(self, value):
@@ -80,6 +84,13 @@ class EtudiantSerializer(serializers.ModelSerializer):
                 queryset = queryset.exclude(pk=self.instance.pk)
             if queryset.exists():
                 raise serializers.ValidationError("Ce passeport est déjà utilisé par un autre étudiant.")
+        return value
+
+    def validate_dateNaissance(self, value):
+        """Validation: la date de naissance ne doit pas être dans le futur"""
+        if value:
+            if value > date.today():
+                raise serializers.ValidationError("La date de naissance ne peut pas être dans le futur.")
         return value
 
     def validate(self, attrs):

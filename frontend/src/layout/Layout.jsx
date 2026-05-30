@@ -1,5 +1,6 @@
 import Sidebar from "./Sidebar";
 import NavbarTop from "./NavbarTop";
+import { Outlet } from "react-router-dom";
 import "./Layout.css";
 
 /*
@@ -24,6 +25,7 @@ function Layout({ children, role }) {
 
         {/* RIGHT MAIN CONTENT */}
         <div className="main-content">
+          <Outlet />
           {children}
         </div>
 

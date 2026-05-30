@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from "../utils/axiosConfig";
 
 function GestionSallesModal({ onClose, onSallesChange }) {
   const [salles, setSalles] = useState([]);
@@ -11,7 +11,7 @@ function GestionSallesModal({ onClose, onSallesChange }) {
   const fetchSalles = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/api/salles/');
+      const res = await axios.get('salles/');
       setSalles(res.data);
     } catch (err) {
       setErrorMessage('Erreur lors du chargement des salles.');
@@ -29,7 +29,7 @@ function GestionSallesModal({ onClose, onSallesChange }) {
     if (!newSalleNom.trim()) return;
 
     try {
-      await axios.post('/api/salles/', { nom: newSalleNom.trim() });
+      await axios.post('salles/', { nom: newSalleNom.trim() });
       setNewSalleNom('');
       setSuccessMessage('Salle ajoutée avec succès.');
       setErrorMessage('');
@@ -46,7 +46,7 @@ function GestionSallesModal({ onClose, onSallesChange }) {
     if (!window.confirm('Voulez-vous vraiment supprimer cette salle ?')) return;
     
     try {
-      await axios.delete(`/api/salles/${id}/`);
+      await axios.delete(`salles/${id}/`);
       setSuccessMessage('Salle supprimée avec succès.');
       setErrorMessage('');
       fetchSalles();

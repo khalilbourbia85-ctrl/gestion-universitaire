@@ -1,7 +1,7 @@
 import React from "react";
 import "./Table.css";
 
-function EnseignantsTable({ enseignants,onEdit,onDelete, filterBy = ['Tous les champs'] }) {
+function EnseignantsTable({ enseignants, onEdit, onDelete, filterBy = ['Tous les champs'], selectedEnseignants = new Set(), onToggleSelect }) {
 
 const showField = (field) => Array.isArray(filterBy) ? (filterBy.includes('Tous les champs') || filterBy.includes(field)) : (filterBy === 'Tous les champs' || filterBy === field);
 
@@ -12,6 +12,28 @@ return(
 <thead>
 
 <tr>
+  <th style={{ width: '40px', textAlign: 'center' }}>
+    <input
+      type="checkbox"
+      checked={enseignants.length > 0 && Array.from(selectedEnseignants).length === enseignants.length}
+      onChange={() => {
+        if (onToggleSelect) {
+          const allSelected = enseignants.length > 0 && Array.from(selectedEnseignants).length === enseignants.length;
+          enseignants.forEach(e => {
+            const isCurrentlySelected = selectedEnseignants.has(e.matricule);
+            if (allSelected && isCurrentlySelected) {
+              // Désélectionner tous
+              onToggleSelect(e.matricule);
+            } else if (!allSelected && !isCurrentlySelected) {
+              // Sélectionner tous
+              onToggleSelect(e.matricule);
+            }
+          });
+        }
+      }}
+      style={{ cursor: 'pointer' }}
+    />
+  </th>
   <th>🆔 Matricule</th>
   {showField('CIN') && <th>📝 CIN</th>}
   {showField('Nom') && <th>👤 Nom</th>}
@@ -31,9 +53,16 @@ return(
 <tbody>
 
 {enseignants.map((e)=>(
-<tr key={e.matricule}>
-
-<td>{e.matricule}</td>
+<tr key={e.matricule} style={{ backgroundColor: selectedEnseignants.has(e.matricule) ? '#e3f2fd' : 'white' }}>
+  <td style={{ width: '40px', textAlign: 'center' }}>
+    <input
+      type="checkbox"
+      checked={selectedEnseignants.has(e.matricule)}
+      onChange={() => onToggleSelect && onToggleSelect(e.matricule)}
+      style={{ cursor: 'pointer' }}
+    />
+  </td>
+  <td>{e.matricule}</td>
 {showField('CIN') && <td>{e.cin}</td>}
 {showField('Nom') && <td>{e.nom}</td>}
 {showField('Prénom') && <td>{e.prenom}</td>}

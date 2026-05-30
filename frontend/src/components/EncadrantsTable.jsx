@@ -1,7 +1,7 @@
 import React from 'react';
 import './Table.css';
 
-function EncadrantsTable({ enseignants, onEdit, onDelete, encadrantAuPlafondPfe, filterBy = ['Tous les champs'] }) {
+function EncadrantsTable({ enseignants, onEdit, onDelete, encadrantAuPlafondPfe, countPfeParEncadrant, filterBy = ['Tous les champs'] }) {
   const safeEnseignants = Array.isArray(enseignants) ? enseignants : [];
   const showField = (field) => Array.isArray(filterBy) ? (filterBy.includes('Tous les champs') || filterBy.includes(field)) : (filterBy === 'Tous les champs' || filterBy === field);
 
@@ -28,6 +28,7 @@ function EncadrantsTable({ enseignants, onEdit, onDelete, encadrantAuPlafondPfe,
           safeEnseignants.map((enseignant, index) => {
             const auPlafond =
               typeof encadrantAuPlafondPfe === 'function' && encadrantAuPlafondPfe(enseignant);
+            const nbPfes = (countPfeParEncadrant && countPfeParEncadrant[enseignant.matricule]) || 0;
             return (
             <tr
               key={enseignant.matricule != null && String(enseignant.matricule) !== '' ? enseignant.matricule : `row-${index}`}
@@ -52,9 +53,11 @@ function EncadrantsTable({ enseignants, onEdit, onDelete, encadrantAuPlafondPfe,
                 <span className="icon edit-icon" onClick={() => onEdit(enseignant)}>
                   ✏️
                 </span>
-                <span className="icon delete-icon" onClick={() => onDelete(enseignant.matricule)}>
-                  🗑️
-                </span>
+                {nbPfes === 0 && (
+                  <span className="icon delete-icon" onClick={() => onDelete(enseignant.matricule)}>
+                    🗑️
+                  </span>
+                )}
               </td>
             </tr>
             );

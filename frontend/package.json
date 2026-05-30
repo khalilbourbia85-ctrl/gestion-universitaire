@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "npx concurrently \"npm run frontend-only\" \"npm run backend\"",
+    "frontend-only": "vite",
+    "backend": "powershell -ExecutionPolicy Bypass -File start_backend.ps1",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

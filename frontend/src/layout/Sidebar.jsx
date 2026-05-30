@@ -42,11 +42,7 @@ function Sidebar() {
   return (
     <div className="sidebar">
       <div className="logo">
-        <img
-          src="/isg-sousse-logo.png"
-          alt="Institut Supérieur de Gestion de Sousse"
-          className="logo-institution"
-        />
+
         <h2 className="logo-app">🎓 UniDepart</h2>
       </div>
       <nav>

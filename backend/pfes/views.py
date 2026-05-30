@@ -6,7 +6,10 @@ from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-# import openpyxl
+from rest_framework.permissions import IsAuthenticated
+import openpyxl
+from io import BytesIO
+import logging
 
 from enseignants.models import Enseignant, Permanent, Vacataire
 from enseignants.contract_rules import get_enseignant_contract_type_label
@@ -14,6 +17,12 @@ from etudiants.models import Etudiant
 from .charge_balance import count_pfe_encadrant, count_soutenance_rapporteur
 from .models import ParametresPfe, Rapporteur, PFE, Soutenance, Salle
 from .serializers import RapporteurSerializer, PFESerializer, SoutenanceSerializer, SalleSerializer
+from utils.excel_utils import read_excel_file, read_csv_file, normalize_header
+
+from django.core.mail import EmailMultiAlternatives
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 class SalleViewSet(viewsets.ModelViewSet):
@@ -21,20 +30,9 @@ class SalleViewSet(viewsets.ModelViewSet):
     serializer_class = SalleSerializer
 
 
-def normalize_header(value):
-    if value is None:
-        return ''
-    header = str(value).strip().lower()
-    header = re.sub(r'[\s_\-]+', '', header)
-    header = re.sub(r'[^a-z0-9]', '', header)
-    return header
-
-from django.core.mail import EmailMultiAlternatives
-from django.conf import settings
-
 def send_pfe_assignment_email(pfe, encadrant):
     etudiants = pfe.etudiants.all()
-    liste_etudiants = ", ".join([f"{etu.nom} {etu.prenom}" for etu in etudiants]) if etudiants else "Aucun"
+    liste_etudiants = ", ".join([f"{etu.nom_fr} {etu.prenom_fr}" for etu in etudiants]) if etudiants else "Aucun"
     
     sujet = f"Nouvelle affectation de PFE : {pfe.sujet}"
     message = (
@@ -258,13 +256,135 @@ class RapporteurViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='import-excel')
     def import_excel(self, request):
-        return Response({'detail': 'Fonction d\'import Excel non disponible.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        """Import rapporteurs from Excel or CSV file"""
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'detail': 'Aucun fichier fourni.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Detect file type
+            filename = file.name.lower()
+            if filename.endswith('.csv'):
+                headers, rows, file_errors = read_csv_file(file)
+            else:
+                headers, rows, file_errors = read_excel_file(file)
+            
+            if file_errors:
+                return Response({'errors': file_errors}, status=status.HTTP_400_BAD_REQUEST)
+            
+            created = []
+            errors = []
+            
+            with transaction.atomic():
+                for row_idx, row_data in rows:
+                    try:
+                        matricule = row_data.get('matricule', '').strip() or row_data.get('matricul', '').strip()
+                        
+                        if not matricule:
+                            errors.append(f"Ligne {row_idx}: Matricule manquant")
+                            continue
+                        
+                        # Try to find the teacher
+                        enseignant = find_enseignant(matricule)
+                        if not enseignant:
+                            errors.append(f"Ligne {row_idx}: Enseignant '{matricule}' non trouvé")
+                            continue
+                        
+                        obj, created_flag = Rapporteur.objects.update_or_create(
+                            matricule=matricule,
+                            defaults={
+                                'cin': enseignant.cin,
+                                'nom': enseignant.nom,
+                                'prenom': enseignant.prenom,
+                                'email': enseignant.email,
+                                'numtel': enseignant.numtel,
+                            }
+                        )
+                        created.append({'matricule': obj.matricule, 'nom': obj.nom, 'created': created_flag})
+                    except Exception as e:
+                        errors.append(f"Ligne {row_idx}: {str(e)}")
+            
+            return Response({
+                'created': created,
+                'errors': errors,
+                'message': f'{len(created)} rapporteur(s) importé(s) avec succès.'
+            }, status=status.HTTP_201_CREATED if created else status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            return Response({'detail': f'Erreur: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
 
 
 class PFEViewSet(viewsets.ModelViewSet):
     serializer_class = PFESerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        # Retourner tous les PFE pour les opérations de création
+        # Les filtres sont appliqués dans list() seulement
+        return PFE.objects.all()
+
+    def list(self, request, *args, **kwargs):
+        # Ici on applique les filtres de permissions
+        queryset = self.get_queryset()
+        user = request.user
+        
+        if not getattr(user, 'is_superuser', False):
+            enseignant = getattr(user, 'enseignant', None)
+            if not enseignant:
+                queryset = PFE.objects.none()
+            else:
+                role = getattr(enseignant, 'role', '')
+                departement = getattr(enseignant, 'departement', None)
+
+                if role == 'chef_departement' and departement:
+                    queryset = queryset.filter(
+                        Q(encadrant__departement=departement) |
+                        Q(etudiants__licence__departement=departement) |
+                        Q(etudiants__specialite__licence__departement=departement) |
+                        Q(encadrant__departement__isnull=True) |
+                        Q(etudiants__licence__isnull=True)
+                    ).distinct()
+                else:
+                    # Un enseignant simple ne voit que les PFE qu'il encadre
+                    queryset = queryset.filter(encadrant=enseignant).distinct()
+        
+        # Utiliser la méthode list() standard avec le queryset filtré
+        self.queryset = queryset
+        return super().list(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        logger.info(f"Création PFE - Données reçues: {request.data}")
+        try:
+            serializer = self.get_serializer(data=request.data)
+            if not serializer.is_valid():
+                logger.error(f"Erreurs de validation: {serializer.errors}")
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except Exception as e:
+            logger.error(f"Erreur lors de la création PFE: {e}", exc_info=True)
+            raise
+
+    def update(self, request, *args, **kwargs):
+        logger.info(f"Mise à jour PFE {kwargs.get('pk')} - Données reçues: {request.data}")
+        try:
+            partial = kwargs.pop('partial', False)
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            if not serializer.is_valid():
+                logger.error(f"Erreurs de validation: {serializer.errors}")
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            self.perform_update(serializer)
+            if getattr(instance, '_prefetched_objects_cache', None):
+                instance._prefetched_objects_cache = {}
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"Erreur lors de la mise à jour PFE: {e}", exc_info=True)
+            raise
 
     def perform_create(self, serializer):
         pfe = serializer.save()
@@ -277,34 +397,6 @@ class PFEViewSet(viewsets.ModelViewSet):
         pfe = serializer.save()
         if pfe.encadrant and pfe.encadrant != old_encadrant:
             send_pfe_assignment_email(pfe, pfe.encadrant)
-
-    def get_queryset(self):
-        user = self.request.user
-        if getattr(user, 'is_superuser', False):
-            return PFE.objects.all()
-        
-        enseignant = getattr(user, 'enseignant', None)
-        if not enseignant:
-            return PFE.objects.none()
-            
-        role = getattr(enseignant, 'role', '')
-        departement = getattr(enseignant, 'departement', None)
-
-        qs = PFE.objects.prefetch_related('etudiants').select_related('encadrant')
-
-        if role == 'admin':
-            return qs.all()
-        elif role == 'chef_departement' and departement:
-            return qs.filter(
-                Q(encadrant__departement=departement) |
-                Q(etudiants__licence__departement=departement) |
-                Q(etudiants__specialite__licence__departement=departement) |
-                Q(encadrant__departement__isnull=True) |
-                Q(etudiants__licence__isnull=True)
-            ).distinct()
-        
-        # Un enseignant simple ne voit que les PFE qu'il encadre
-        return qs.filter(encadrant=enseignant).distinct()
 
     @action(detail=False, methods=['get', 'patch'], url_path='parametres')
     def parametres(self, request):
@@ -329,7 +421,106 @@ class PFEViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='import-excel')
     def import_excel(self, request):
-        return Response({'detail': 'Fonction d\'import Excel non disponible.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        """
+        Import PFE data from an Excel or CSV file.
+        Expected columns: sujet, duree, specialite, type_projet, encadrant_matricule, etudiant1_num, etudiant2_num
+        """
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'detail': 'Aucun fichier fourni.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Detect file type and read
+            filename = file.name.lower()
+            if filename.endswith('.csv'):
+                headers, rows, file_errors = read_csv_file(file)
+            else:
+                headers, rows, file_errors = read_excel_file(file)
+            
+            if file_errors:
+                return Response({'errors': file_errors}, status=status.HTTP_400_BAD_REQUEST)
+            
+            created = []
+            errors = []
+            
+            with transaction.atomic():
+                for row_idx, row_data in rows:
+                    try:
+                        # Extract data
+                        sujet = row_data.get('sujet', '').strip()
+                        duree = row_data.get('duree')
+                        specialite = row_data.get('specialite', '').strip()
+                        type_projet = row_data.get('typeprojt', '').strip() or row_data.get('typeprojet', '').strip()
+                        encadrant_matricule = row_data.get('encadrantmatricule') or row_data.get('encadrant')
+                        
+                        if not sujet:
+                            errors.append(f"Ligne {row_idx}: Sujet manquant")
+                            continue
+                        
+                        if not duree:
+                            errors.append(f"Ligne {row_idx}: Durée manquante")
+                            continue
+                        
+                        try:
+                            duree = int(float(str(duree)))
+                        except (ValueError, TypeError):
+                            errors.append(f"Ligne {row_idx}: Durée invalide ({duree})")
+                            continue
+                        
+                        # Find encadrant if provided
+                        encadrant = None
+                        if encadrant_matricule:
+                            encadrant = find_enseignant(str(encadrant_matricule).strip())
+                            if not encadrant:
+                                errors.append(f"Ligne {row_idx}: Encadrant '{encadrant_matricule}' non trouvé")
+                        
+                        # Create PFE
+                        pfe = PFE.objects.create(
+                            sujet=sujet,
+                            duree=duree,
+                            specialite=specialite,
+                            type_projet=type_projet,
+                            encadrant=encadrant
+                        )
+                        
+                        # Link students if provided
+                        etudiant_fields = [k for k in row_data.keys() if 'etudiant' in k and 'num' in k]
+                        for field in sorted(etudiant_fields):
+                            num_etudiant = row_data.get(field, '').strip()
+                            if num_etudiant:
+                                try:
+                                    # Handle Excel numbers imported as float (e.g. "12345678.0" -> "12345678")
+                                    num_etudiant_str = str(num_etudiant).split('.')[0].strip()
+                                    etudiant = find_etudiant(num_etudiant_str)
+                                    if etudiant:
+                                        pfe.etudiants.add(etudiant)
+                                    else:
+                                        errors.append(f"Ligne {row_idx}: Étudiant '{num_etudiant}' non trouvé")
+                                except Exception as ex:
+                                    errors.append(f"Ligne {row_idx}: Erreur lors de la liaison de l'étudiant '{num_etudiant}': {str(ex)}")
+                        
+                        created.append(pfe.idPfe)
+                        
+                        # Send email if encadrant assigned
+                        if encadrant:
+                            send_pfe_assignment_email(pfe, encadrant)
+                    
+                    except Exception as e:
+                        errors.append(f"Ligne {row_idx}: {str(e)}")
+                        continue
+            
+            return Response({
+                'created': created,
+                'errors': errors,
+                'message': f'{len(created)} PFE(s) importés avec succès.'
+            }, status=status.HTTP_201_CREATED if created else status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            return Response({
+                'detail': f'Erreur lors de la lecture du fichier: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 
 class SoutenanceViewSet(viewsets.ModelViewSet):
@@ -377,89 +568,112 @@ class SoutenanceViewSet(viewsets.ModelViewSet):
         ).distinct()
 
 class DashboardStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+    
     def get(self, request, *args, **kwargs):
-        from etudiants.models import Etudiant
-        from pfes.models import PFE, Soutenance
-        from django.db.models import Count, Q
+        try:
+            from etudiants.models import Etudiant
+            from pfes.models import PFE, Soutenance
+            from django.db.models import Count, Q, F, Exists, OuterRef
 
-        total_etudiants = Etudiant.objects.count()
-        
-        # Pourcentage de dépôt (Dépôt électronique ou papier = True)
-        etudiants_ayant_depose = Soutenance.objects.filter(
-            Q(depot_electronique=True) | Q(depot_papier=True)
-        ).values('etudiants').distinct().count()
-        
-        pourcentage_depot = (etudiants_ayant_depose / total_etudiants * 100) if total_etudiants > 0 else 0
+            total_etudiants = Etudiant.objects.count()
+            
+            # Pourcentage de dépôt (Dépôt électronique ou papier = True)
+            # Get distinct students who have made a deposit
+            etudiants_ayant_depose = Etudiant.objects.filter(
+                soutenances__depot_electronique=True
+            ) | Etudiant.objects.filter(
+                soutenances__depot_papier=True
+            )
+            etudiants_ayant_depose = etudiants_ayant_depose.distinct().count()
+            
+            pourcentage_depot = (etudiants_ayant_depose / total_etudiants * 100) if total_etudiants > 0 else 0
 
-        # Taux de réussite technique
-        soutenance_validees = Soutenance.objects.filter(resultat_technique__icontains='Validé').count()
-        soutenance_non_validees = Soutenance.objects.filter(resultat_technique__icontains='Non validé').count()
-        total_techniques = soutenance_validees + soutenance_non_validees
-        taux_reussite_technique = (soutenance_validees / total_techniques * 100) if total_techniques > 0 else 0
+            # Taux de réussite technique
+            soutenance_validees = Soutenance.objects.filter(resultat_technique__icontains='Validé').count()
+            soutenance_non_validees = Soutenance.objects.filter(resultat_technique__icontains='Non validé').count()
+            total_techniques = soutenance_validees + soutenance_non_validees
+            taux_reussite_technique = (soutenance_validees / total_techniques * 100) if total_techniques > 0 else 0
 
-        # Taux de réussite finale
-        soutenance_finale_validees = Soutenance.objects.filter(resultat_finale__icontains='Validé').count()
-        soutenance_finale_non_validees = Soutenance.objects.filter(resultat_finale__icontains='Non validé').count()
-        total_finales = soutenance_finale_validees + soutenance_finale_non_validees
-        taux_reussite_finale = (soutenance_finale_validees / total_finales * 100) if total_finales > 0 else 0
+            # Taux de réussite finale
+            soutenance_finale_validees = Soutenance.objects.filter(resultat_finale__icontains='Validé').count()
+            soutenance_finale_non_validees = Soutenance.objects.filter(resultat_finale__icontains='Non validé').count()
+            total_finales = soutenance_finale_validees + soutenance_finale_non_validees
+            taux_reussite_finale = (soutenance_finale_validees / total_finales * 100) if total_finales > 0 else 0
 
-        # Nombre d'étudiants par année et par lieu de stage
-        lieux_stage = PFE.objects.exclude(lieu_stage__isnull=True).exclude(lieu_stage='').values('lieu_stage').annotate(count=Count('etudiants')).order_by('-count')[:10]
+            # Nombre d'étudiants par lieu de stage
+            # Count distinct students per lieu_stage directly without intermediate annotation
+            lieux_stage = list(PFE.objects.exclude(lieu_stage__isnull=True).exclude(lieu_stage='').values('lieu_stage').annotate(
+                count=Count('etudiants', distinct=True)
+            ).order_by('-count')[:10])
 
-        # Monôme vs Binôme
-        pfes_counts = PFE.objects.annotate(nb_etudiants=Count('etudiants'))
-        monomes = pfes_counts.filter(nb_etudiants=1).count()
-        binomes = pfes_counts.filter(nb_etudiants=2).count()
-        total_projets = monomes + binomes
-        pct_monome = (monomes / total_projets * 100) if total_projets > 0 else 0
-        pct_binome = (binomes / total_projets * 100) if total_projets > 0 else 0
+            # Monôme vs Binôme
+            # Use distinct count to properly count unique PFEs with 1 or 2 students
+            pfes_with_counts = PFE.objects.annotate(nb_etudiants=Count('etudiants', distinct=True))
+            monomes = pfes_with_counts.filter(nb_etudiants=1).count()
+            binomes = pfes_with_counts.filter(nb_etudiants=2).count()
+            total_projets = monomes + binomes
+            pct_monome = (monomes / total_projets * 100) if total_projets > 0 else 0
+            pct_binome = (binomes / total_projets * 100) if total_projets > 0 else 0
 
-        # Comparaison de réussite par genre
-        # Récupération des soutenances validées par étudiant
-        etudiants_valides_ids = Soutenance.objects.filter(resultat_technique__icontains='Validé').values_list('etudiants', flat=True)
-        etudiants_total_soutenus_ids = Soutenance.objects.exclude(resultat_technique__isnull=True).exclude(resultat_technique='').values_list('etudiants', flat=True)
+            # Comparaison de réussite par genre
+            # Get distinct students from successful defenses
+            etudiants_valides = Etudiant.objects.filter(
+                soutenances__resultat_technique__icontains='Validé'
+            ).distinct()
+            etudiants_total_soutenus = Etudiant.objects.filter(
+                soutenances__resultat_technique__isnull=False
+            ).exclude(soutenances__resultat_technique='').distinct()
 
-        hommes_valides = Etudiant.objects.filter(idEtudiant__in=etudiants_valides_ids, genre='M').count()
-        femmes_valides = Etudiant.objects.filter(idEtudiant__in=etudiants_valides_ids, genre='F').count()
-        hommes_total = Etudiant.objects.filter(idEtudiant__in=etudiants_total_soutenus_ids, genre='M').count()
-        femmes_total = Etudiant.objects.filter(idEtudiant__in=etudiants_total_soutenus_ids, genre='F').count()
+            hommes_valides = etudiants_valides.filter(genre='M').count()
+            femmes_valides = etudiants_valides.filter(genre='F').count()
+            hommes_total = etudiants_total_soutenus.filter(genre='M').count()
+            femmes_total = etudiants_total_soutenus.filter(genre='F').count()
 
-        taux_reussite_hommes = (hommes_valides / hommes_total * 100) if hommes_total > 0 else 0
-        taux_reussite_femmes = (femmes_valides / femmes_total * 100) if femmes_total > 0 else 0
+            taux_reussite_hommes = (hommes_valides / hommes_total * 100) if hommes_total > 0 else 0
+            taux_reussite_femmes = (femmes_valides / femmes_total * 100) if femmes_total > 0 else 0
 
-        # Réussite par département
-        # On va grouper par département de la licence de l'étudiant
-        from academique.models import Departement
-        deps = Departement.objects.all()
-        dep_stats = []
-        for dep in deps:
-            total_dep = Etudiant.objects.filter(licence__departement=dep, idEtudiant__in=etudiants_total_soutenus_ids).count()
-            valides_dep = Etudiant.objects.filter(licence__departement=dep, idEtudiant__in=etudiants_valides_ids).count()
-            taux = (valides_dep / total_dep * 100) if total_dep > 0 else 0
-            if total_dep > 0:
-                dep_stats.append({
-                    'departement': dep.nom,
-                    'taux_reussite': taux,
-                    'total': total_dep
-                })
-        
-        dep_stats = sorted(dep_stats, key=lambda x: x['taux_reussite'], reverse=True)
+            # Réussite par département
+            from academique.models import Departement
+            deps = Departement.objects.all()
+            dep_stats = []
+            for dep in deps:
+                total_dep = etudiants_total_soutenus.filter(licence__departement=dep).count()
+                valides_dep = etudiants_valides.filter(licence__departement=dep).count()
+                taux = (valides_dep / total_dep * 100) if total_dep > 0 else 0
+                if total_dep > 0:
+                    dep_stats.append({
+                        'departement': dep.nom,
+                        'taux_reussite': taux,
+                        'total': total_dep
+                    })
+            
+            dep_stats = sorted(dep_stats, key=lambda x: x['taux_reussite'], reverse=True)
 
-        return Response({
-            'total_etudiants': total_etudiants,
-            'etudiants_ayant_depose': etudiants_ayant_depose,
-            'pourcentage_depot': pourcentage_depot,
-            'taux_reussite_technique': taux_reussite_technique,
-            'taux_reussite_finale': taux_reussite_finale,
-            'soutenances_validees': soutenance_validees,
-            'soutenances_non_validees': soutenance_non_validees,
-            'soutenances_finale_validees': soutenance_finale_validees,
-            'soutenances_finale_non_validees': soutenance_finale_non_validees,
-            'lieux_stage': list(lieux_stage),
-            'pct_monome': pct_monome,
-            'pct_binome': pct_binome,
-            'taux_reussite_hommes': taux_reussite_hommes,
-            'taux_reussite_femmes': taux_reussite_femmes,
-            'stats_departements': dep_stats
-        })
+            
+            return Response({
+                'total_etudiants': total_etudiants,
+                'etudiants_ayant_depose': etudiants_ayant_depose,
+                'pourcentage_depot': pourcentage_depot,
+                'taux_reussite_technique': taux_reussite_technique,
+                'taux_reussite_finale': taux_reussite_finale,
+                'soutenances_validees': soutenance_validees,
+                'soutenances_non_validees': soutenance_non_validees,
+                'soutenances_finale_validees': soutenance_finale_validees,
+                'soutenances_finale_non_validees': soutenance_finale_non_validees,
+                'lieux_stage': lieux_stage,
+                'pct_monome': pct_monome,
+                'pct_binome': pct_binome,
+                'taux_reussite_hommes': taux_reussite_hommes,
+                'taux_reussite_femmes': taux_reussite_femmes,
+                'stats_departements': dep_stats
+            })
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in DashboardStatsView: {str(e)}", exc_info=True)
+            return Response({
+                'error': 'Erreur lors du chargement des statistiques',
+                'detail': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

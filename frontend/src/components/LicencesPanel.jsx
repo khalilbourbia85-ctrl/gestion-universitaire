@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axios from "../utils/axiosConfig";
 import "./LicencesPanel.css";
 
 function LicencesPanel() {
@@ -18,7 +18,7 @@ function LicencesPanel() {
 
   const loadLicences = async () => {
     try {
-      const response = await axios.get("/api/licences/");
+      const response = await axios.get("licences/");
       setLicences(response.data);
     } catch (error) {
       console.error("Erreur lors du chargement des licences:", error);
@@ -31,9 +31,9 @@ function LicencesPanel() {
     try {
       // Charger la licence avec ses spécialités et modules
       const [licenceRes, specialitesRes, modulesRes] = await Promise.all([
-        axios.get(`/api/licences/${licenceId}/`),
-        axios.get(`/api/specialites/?licence=${licenceId}`),
-        axios.get(`/api/modules/?licence=${licenceId}`)
+        axios.get(`licences/${licenceId}/`),
+        axios.get(`specialites/?licence=${licenceId}`),
+        axios.get(`modules/?licence=${licenceId}`)
       ]);
 
       const specialites = specialitesRes.data;

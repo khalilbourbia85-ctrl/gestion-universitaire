@@ -2,6 +2,18 @@ import React,{useState,useEffect} from "react";
 import "./EtudiantForm.css";
 
 function EnseignantForm({ selected, onSubmit, onCancel, onFormChange }) {
+  // Fonction pour obtenir la date d'aujourd'hui au format YYYY-MM-DD
+  const getTodayDate = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const todayDate = getTodayDate();
+  const [dateErrors, setDateErrors] = useState({});
+  
   const initialFormState = {
     matricule: "",
     cin: "",
@@ -79,6 +91,26 @@ function EnseignantForm({ selected, onSubmit, onCancel, onFormChange }) {
 
 const handleChange = (e) => {
   const { name, value } = e.target;
+  
+  // Validation des dates qui ne doivent pas être dans le futur
+  const pastDateFields = ['dateRecrutement', 'dateTitularisation'];
+  const isDiplomaDateField = name === 'diplome.dateObtention';
+  
+  if (pastDateFields.includes(name) || isDiplomaDateField) {
+    if (value && value > todayDate) {
+      setDateErrors((prev) => ({
+        ...prev,
+        [name]: `Cette date ne peut pas être dans le futur`
+      }));
+    } else {
+      setDateErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  }
+  
   const updateForm = (prevForm) => {
     let nextForm;
     if (name.includes(".")) {
@@ -138,6 +170,17 @@ const validateForm = () => {
     if (!/^\d{8}$/.test(form.numTel.trim())) return "Le téléphone doit contenir exactement 8 chiffres.";
     if (!form.grade.trim()) return "Grade obligatoire.";
     if (!form.dateRecrutement.trim()) return "Date de recrutement obligatoire.";
+
+    // Validation des dates passées
+    if (form.dateRecrutement && form.dateRecrutement > todayDate) {
+      return "La date de recrutement ne peut pas être dans le futur.";
+    }
+    if (form.dateTitularisation && form.dateTitularisation > todayDate) {
+      return "La date de titularisation ne peut pas être dans le futur.";
+    }
+    if (form.diplome.dateObtention && form.diplome.dateObtention > todayDate) {
+      return "La date d'obtention du diplôme ne peut pas être dans le futur.";
+    }
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(form.email)) {
@@ -204,7 +247,19 @@ const validateForm = () => {
     </div>
     <div className="input-group">
       <label>Date de recrutement</label>
-      <input type="date" name="dateRecrutement" value={form.dateRecrutement} onChange={handleChange}/>
+      <input 
+        type="date" 
+        name="dateRecrutement" 
+        value={form.dateRecrutement} 
+        onChange={handleChange}
+        max={todayDate}
+        title="La date de recrutement ne peut pas être dans le futur"
+      />
+      {dateErrors.dateRecrutement && (
+        <span style={{ color: 'red', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+          ⚠️ {dateErrors.dateRecrutement}
+        </span>
+      )}
     </div>
     <div className="input-group">
       <label>Statut Administratif</label>
@@ -230,7 +285,19 @@ const validateForm = () => {
       <>
         <div className="input-group">
           <label>Date titularisation</label>
-          <input type="date" name="dateTitularisation" value={form.dateTitularisation} onChange={handleChange} />
+          <input 
+            type="date" 
+            name="dateTitularisation" 
+            value={form.dateTitularisation} 
+            onChange={handleChange}
+            max={todayDate}
+            title="La date de titularisation ne peut pas être dans le futur"
+          />
+          {dateErrors.dateTitularisation && (
+            <span style={{ color: 'red', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+              ⚠️ {dateErrors.dateTitularisation}
+            </span>
+          )}
         </div>
         <div className="input-group">
           <label>Année inscription</label>
@@ -323,7 +390,19 @@ const validateForm = () => {
     </div>
     <div className="input-group">
       <label>Date obtention</label>
-      <input type="date" name="diplome.dateObtention" value={form.diplome.dateObtention} onChange={handleChange} />
+      <input 
+        type="date" 
+        name="diplome.dateObtention" 
+        value={form.diplome.dateObtention} 
+        onChange={handleChange}
+        max={todayDate}
+        title="La date d'obtention du diplôme ne peut pas être dans le futur"
+      />
+      {dateErrors['diplome.dateObtention'] && (
+        <span style={{ color: 'red', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+          ⚠️ {dateErrors['diplome.dateObtention']}
+        </span>
+      )}
     </div>
   </div>
 

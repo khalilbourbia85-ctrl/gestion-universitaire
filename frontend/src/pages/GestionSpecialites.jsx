@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from "../utils/axiosConfig";
 import SpecialiteForm from '../components/SpecialiteForm';
 import SpecialiteTable from '../components/SpecialiteTable';
 import MultiSelectDropdown from "../components/MultiSelectDropdown";
@@ -18,7 +18,7 @@ const GestionSpecialites = () => {
 
   const fetchSpecialites = async () => {
     try {
-      const response = await axios.get('/api/specialites/');
+      const response = await axios.get('specialites/');
       setSpecialites(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement des spécialités:', error);
@@ -28,7 +28,7 @@ const GestionSpecialites = () => {
 
   const fetchLicences = async () => {
     try {
-      const response = await axios.get('/api/licences/');
+      const response = await axios.get('licences/');
       setLicences(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement des licences:', error);
@@ -83,11 +83,11 @@ const GestionSpecialites = () => {
   const handleAdd = async (formData) => {
     try {
       if (selectedSpecialite) {
-        await axios.put(`/api/specialites/${selectedSpecialite.id}/`, formData);
+        await axios.put(`specialites/${selectedSpecialite.id}/`, formData);
         setMessage('Spécialité mise à jour avec succès !');
         setError('');
       } else {
-        await axios.post('/api/specialites/', formData);
+        await axios.post('specialites/', formData);
         setMessage('Spécialité ajoutée avec succès !');
         setError('');
       }
@@ -109,7 +109,7 @@ const GestionSpecialites = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette spécialité ?')) {
       try {
-        await axios.delete(`/api/specialites/${id}/`);
+        await axios.delete(`specialites/${id}/`);
         setMessage('Spécialité supprimée avec succès !');
         setError('');
         fetchSpecialites();

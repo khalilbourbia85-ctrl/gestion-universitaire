@@ -59,7 +59,7 @@ function SoutenancesTable({ soutenances, onEdit, onDelete, filterBy = ['Tous les
               {showField('Type contrat (rap.)') && <td>{soutenance.rapporteur_detail?.typeContrat || '—'}</td>}
               {filterBy.includes('Tous les champs') && <td>
                 {soutenance.etudiants_detail && soutenance.etudiants_detail.length > 0
-                  ? soutenance.etudiants_detail.map((e) => `${e.nom} ${e.prenom}`).join(', ')
+                  ? soutenance.etudiants_detail.map((e) => `${e.nom_fr} ${e.prenom_fr}`).join(', ')
                   : soutenance.etudiants.join(', ')}
               </td>}
               {filterBy.includes('Tous les champs') && <td>{soutenance.resultat_technique || '—'}</td>}

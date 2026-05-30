@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import axios from "../utils/axiosConfig";
 import DepartementForm from '../components/DepartementForm';
 import DepartementTable from '../components/DepartementTable';
 import ChefProfileModal from '../components/ChefProfileModal';
@@ -31,11 +31,14 @@ const GestionDepartements = ({ role }) => {
 
   const fetchDepartements = async () => {
     try {
-      const response = await axios.get('/api/departements/');
+      const response = await axios.get('departements/');
       setDepartements(response.data);
+      setError('');
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors du chargement des départements');
+      console.error('Erreur chargement départements:', error);
+      const message = error.response?.data?.detail || error.response?.data?.error || 'Erreur de chargement des données';
+      setError(message);
+      setDepartements([]);
     } finally {
       setLoading(false);
     }
@@ -78,10 +81,10 @@ const GestionDepartements = ({ role }) => {
   const handleAdd = async (formData) => {
     try {
       if (selectedDepartement) {
-        await axios.put(`/api/departements/${selectedDepartement.id}/`, formData);
+        await axios.put(`departements/${selectedDepartement.id}/`, formData);
         alert('Département mis à jour avec succès');
       } else {
-        await axios.post('/api/departements/', formData);
+        await axios.post('departements/', formData);
         alert('Département ajouté avec succès');
       }
       fetchDepartements();
@@ -100,7 +103,7 @@ const GestionDepartements = ({ role }) => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`/api/departements/${id}/`);
+      await axios.delete(`departements/${id}/`);
       alert('Département supprimé avec succès');
       fetchDepartements();
     } catch (error) {
@@ -114,6 +117,8 @@ const GestionDepartements = ({ role }) => {
     setSelectedDepartement(null);
   };
 
+
+
   const handleImportExcel = () => {
     fileRef.current?.click();
   };
@@ -125,23 +130,34 @@ const GestionDepartements = ({ role }) => {
     try {
       const data = await parseFile(file);
 
-      const normalizeHeader = (header) =>
-        String(header)
+      const getNormalizedKey = (field) => {
+        const norm = String(field)
           .trim()
           .toLowerCase()
           .replace(/\s+/g, " ")
           .replace(/[^a-z0-9 ]/g, "");
 
+        if (norm.includes("nom") || norm.includes("intitule") || norm.includes("departement")) {
+          return "nom";
+        }
+        if (norm.includes("code") || norm.includes("identifiant")) {
+          return "code";
+        }
+        if (norm.includes("responsable") || norm.includes("chef") || norm.includes("directeur")) {
+          return "responsable";
+        }
+        if (norm.includes("email") || norm.includes("mail") || norm.includes("courriel")) {
+          return "email";
+        }
+        return null;
+      };
+
       const importedData = data.map(row => {
         return Object.keys(row).reduce((acc, key) => {
-          const normKey = normalizeHeader(key);
-          let finalKey = normKey;
-          if (normKey === 'nom' || normKey === 'intitule') finalKey = 'nom';
-          if (normKey === 'code' || normKey === 'identifiant') finalKey = 'code';
-          if (normKey === 'responsable' || normKey === 'chef' || normKey === 'chef de departement') finalKey = 'responsable';
-          if (normKey === 'email' || normKey === 'courriel') finalKey = 'email';
-          
-          acc[finalKey] = row[key];
+          const finalKey = getNormalizedKey(key);
+          if (finalKey) {
+            acc[finalKey] = row[key];
+          }
           return acc;
         }, {});
       });
@@ -154,7 +170,7 @@ const GestionDepartements = ({ role }) => {
       let successCount = 0;
       for (const record of importedData) {
         try {
-          await axios.post('/api/departements/', record);
+          await axios.post('departements/', record);
           successCount++;
         } catch (itemErr) {
           console.error(`Erreur lors de l'import:`, itemErr);
@@ -225,6 +241,7 @@ const GestionDepartements = ({ role }) => {
           <button className="btn btn-import" onClick={handleImportExcel}>
             📥 Importer Départements
           </button>
+
         </div>
       </div>
 

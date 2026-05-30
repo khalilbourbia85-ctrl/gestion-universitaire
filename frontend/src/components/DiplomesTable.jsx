@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axios from "../utils/axiosConfig";
 import "./Table.css";
 
 function DiplomesTable() {
@@ -14,7 +14,7 @@ function DiplomesTable() {
   const fetchDiplomes = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/diplomes/');
+      const response = await axios.get('diplomes/');
       setDiplomes(response.data);
     } catch (err) {
       setError(err.message || "Erreur lors du chargement des diplômes");

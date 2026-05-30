@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import axios from "../utils/axiosConfig";
 import ReactMarkdown from 'react-markdown';
 import './ChatAssistant.css';
 
@@ -29,7 +29,7 @@ export default function ChatAssistant() {
     setIsLoading(true);
 
     try {
-      const res = await axios.post('/api/ai/chat/', {
+      const res = await axios.post('ai/chat/', {
         message: userMsg.content,
         // Send history excluding the first greeting to save context, if you want
         history: history.filter(h => h.role !== 'system')

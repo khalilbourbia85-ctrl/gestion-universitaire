@@ -1,43 +1,50 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import axios from 'axios';
+import axios from "../utils/axiosConfig";
 import EncadrantsTable from '../components/EncadrantsTable';
 import EncadrantsForm from '../components/EncadrantsForm';
 import MultiSelectDropdown from "../components/MultiSelectDropdown";
 import { parseFile } from "../utils/fileParser";
 import './GestionEtudiants.css';
 
+// Normalise une clé matricule en chaîne vide ou valeur trimée
 function matriculeKeyPlafond(m) {
   if (m === null || m === undefined) return '';
   if (typeof m === 'object') return '';
   return String(m).trim();
 }
 
+// Limite une valeur numérique entre 1 et 99
 function clampPlafond(n) {
   const x = Number(n);
   if (!Number.isFinite(x)) return 5;
   return Math.min(99, Math.max(1, Math.floor(x)));
 }
 
+// Composant principal pour gérer les encadrants (affichage, création, modification, suppression, import)
 function GestionEncadrants() {
+  // Autres composants
   const [enseignants, setEnseignants] = useState([]);
   const [pfes, setPfes] = useState([]);
   const [plafondGroupesGlobal, setPlafondGroupesGlobal] = useState(5);
+  // UI et filtrage
   const [selectedEncadrant, setSelectedEncadrant] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBy, setFilterBy] = useState(['Tous les champs']);
+  // Messages et état de chargement
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const fileRef = useRef(null);
 
+  // Charge encadrants, PFEs et plafond global en parallèle
   const loadData = async () => {
     setLoading(true);
     try {
       const [ensRes, pfesRes, paramRes] = await Promise.all([
-        axios.get('/api/enseignants/'),
-        axios.get('/api/pfes/'),
-        axios.get('/api/pfes/parametres/').catch(() => ({ data: { plafond_groupes: 5 } })),
+        axios.get('enseignants/'),
+        axios.get('pfes/'),
+        axios.get('pfes/parametres/').catch(() => ({ data: { plafond_groupes: 5 } })),
       ]);
       setEnseignants(Array.isArray(ensRes.data) ? ensRes.data : []);
       setPfes(Array.isArray(pfesRes.data) ? pfesRes.data : []);
@@ -52,6 +59,7 @@ function GestionEncadrants() {
     }
   };
 
+  // Compte le nombre de PFEs assignés à chaque encadrant
   const countPfeParEncadrant = useMemo(() => {
     const c = {};
     (pfes || []).forEach((p) => {
@@ -63,6 +71,7 @@ function GestionEncadrants() {
     return c;
   }, [pfes]);
 
+  // Vérifie si un encadrant a atteint son plafond de PFEs
   const encadrantAuPlafondPfe = useCallback(
     (e) => {
       const mk = matriculeKeyPlafond(e?.matricule);
@@ -74,10 +83,12 @@ function GestionEncadrants() {
     [countPfeParEncadrant, plafondGroupesGlobal]
   );
 
+  // Charge les données au montage du composant
   useEffect(() => {
     loadData();
   }, []);
 
+  // Filtre les encadrants selon le terme de recherche et les champs sélectionnés
   const filteredEnseignants = enseignants.filter((e) => {
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
@@ -85,11 +96,11 @@ function GestionEncadrants() {
     if (filterBy.includes("Tous les champs")) {
       return (
           String(e.matricule || "").toLowerCase().includes(term) ||
-          e.cin.toLowerCase().includes(term) ||
-          e.nom.toLowerCase().includes(term) ||
-          e.prenom.toLowerCase().includes(term) ||
-          e.email.toLowerCase().includes(term) ||
-          e.grade.toLowerCase().includes(term) ||
+          String(e.cin || "").toLowerCase().includes(term) ||
+          String(e.nom || "").toLowerCase().includes(term) ||
+          String(e.prenom || "").toLowerCase().includes(term) ||
+          String(e.email || "").toLowerCase().includes(term) ||
+          String(e.grade || "").toLowerCase().includes(term) ||
           String(e.typeContrat || "").toLowerCase().includes(term)
       );
     } else {
@@ -98,15 +109,15 @@ function GestionEncadrants() {
           case "Matricule":
             return String(e.matricule || "").toLowerCase().includes(term);
           case "CIN":
-            return e.cin.toLowerCase().includes(term);
+            return String(e.cin || "").toLowerCase().includes(term);
           case "Nom":
-            return e.nom.toLowerCase().includes(term);
+            return String(e.nom || "").toLowerCase().includes(term);
           case "Prénom":
-            return e.prenom.toLowerCase().includes(term);
+            return String(e.prenom || "").toLowerCase().includes(term);
           case "Email":
-            return e.email.toLowerCase().includes(term);
+            return String(e.email || "").toLowerCase().includes(term);
           case "Grade":
-            return e.grade.toLowerCase().includes(term);
+            return String(e.grade || "").toLowerCase().includes(term);
           case "Type contrat":
             return String(e.typeContrat || "").toLowerCase().includes(term);
           default:
@@ -116,6 +127,7 @@ function GestionEncadrants() {
     }
   });
 
+  // Ouvre le formulaire modal pour créer ou éditer un encadrant
   const handleOpenForm = (enseignant = null) => {
     setSelectedEncadrant(enseignant);
     setShowForm(true);
@@ -123,18 +135,20 @@ function GestionEncadrants() {
     setMessage('');
   };
 
+  // Ferme le formulaire modal
   const handleCloseForm = () => {
     setSelectedEncadrant(null);
     setShowForm(false);
   };
 
+  // Sauvegarde un encadrant (création ou modification) via l'API
   const handleSaveEncadrant = async (data) => {
     try {
       if (selectedEncadrant) {
-        await axios.put(`/api/enseignants/${selectedEncadrant.matricule}/`, data);
+        await axios.put(`enseignants/${selectedEncadrant.matricule}/`, data);
         setMessage('Encadrant modifié avec succès.');
       } else {
-        await axios.post('/api/enseignants/', data);
+        await axios.post('enseignants/', data);
         setMessage('Encadrant ajouté avec succès.');
       }
       handleCloseForm();
@@ -158,10 +172,11 @@ function GestionEncadrants() {
     }
   };
 
+  // Supprime un encadrant après confirmation
   const handleDeleteEncadrant = async (matricule) => {
     if (!window.confirm('Supprimer cet encadrant ?')) return;
     try {
-      await axios.delete(`/api/enseignants/${matricule}/`);
+      await axios.delete(`enseignants/${matricule}/`);
       setMessage('Encadrant supprimé avec succès.');
       loadData();
     } catch (err) {
@@ -169,8 +184,10 @@ function GestionEncadrants() {
     }
   };
 
+  // Déclenche le sélecteur de fichier
   const handleImportClick = () => fileRef.current.click();
 
+  // Importe les encadrants depuis un fichier Excel/CSV
   const handleImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -227,7 +244,7 @@ function GestionEncadrants() {
       let successCount = 0;
       for (const enseignant of cleanedData) {
         try {
-          await axios.post('/api/enseignants/', enseignant);
+          await axios.post('enseignants/', enseignant);
           successCount++;
         } catch (itemErr) {
           console.error(`Erreur pour ${enseignant.matricule}:`, itemErr);
@@ -244,17 +261,21 @@ function GestionEncadrants() {
     }
   };
 
+  // Normalise les espaces multiples en espace unique
   const normalizeSpaces = (value) =>
     typeof value === "string"
       ? value.trim().replace(/\s+/g, " ")
       : value;
 
+  // Extrait uniquement les chiffres d'une chaîne
   const cleanDigits = (value) =>
     String(value || "").replace(/\D/g, "");
 
+  // Normalise un email en minuscules et sans espaces
   const cleanEmail = (value) =>
     String(value || "").trim().toLowerCase();
 
+  // Nettoie et normalise tous les champs d'un encadrant
   const cleanEnseignant = (item) => ({
     matricule: normalizeSpaces(item.matricule),
     cin: cleanDigits(item.cin),
@@ -275,6 +296,7 @@ function GestionEncadrants() {
     }
   });
 
+  // Normalise un en-tête pour la comparaison
   const normalizeHeader = (header) =>
     String(header)
       .trim()
@@ -282,6 +304,7 @@ function GestionEncadrants() {
       .replace(/\s+/g, " ")
       .replace(/[^a-z0-9 ]/g, "");
 
+  // Parse une ligne CSV en tenant compte des guillemets
   const parseCsvLine = (line) => {
     const parts = [];
     const regex = /(?:"([^"]*(?:""[^"]*)*)"|([^",]*))(?:,|$)/g;
@@ -294,6 +317,7 @@ function GestionEncadrants() {
     return parts;
   };
 
+  // Parse un texte CSV en tableaux d'objets avec en-têtes
   const parseCsv = (text) => {
     const rows = text
       .split(/\r?\n/)
@@ -346,6 +370,7 @@ function GestionEncadrants() {
     });
   };
 
+  // Interface principale : titre, messages, et contenu selon l'état de chargement
   return (
     <div className="main-container">
       <h2 className="page-title">Gestion des Encadrants</h2>
@@ -356,6 +381,7 @@ function GestionEncadrants() {
         <div className="table-card">Chargement en cours...</div>
       ) : (
         <>
+          {/* Zone de recherche, boutons et tableau */}
           <div className="page-container">
             <div className="search-area" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
@@ -386,6 +412,7 @@ function GestionEncadrants() {
               />
             </div>
 
+            {/* Boutons d'action : import et création */}
             <div className="buttons-area">
               <button onClick={handleImportClick} className="btn import-btn">
                 Importer fichier
@@ -399,6 +426,7 @@ function GestionEncadrants() {
             </div>
           </div>
 
+          {/* Input fichier caché pour l'import */}
           <input
             type="file"
             accept=".csv,.json,.xlsx,.xls"
@@ -407,16 +435,19 @@ function GestionEncadrants() {
             onChange={handleImport}
           />
 
+          {/* Tableau des encadrants avec actions */}
           <EncadrantsTable
             enseignants={filteredEnseignants}
             onEdit={handleOpenForm}
             onDelete={handleDeleteEncadrant}
             encadrantAuPlafondPfe={encadrantAuPlafondPfe}
+            countPfeParEncadrant={countPfeParEncadrant}
             filterBy={filterBy}
           />
         </>
       )}
 
+      {/* Modal du formulaire pour créer/éditer */}
       {showForm && (
         <div className="modal-overlay">
           <div className="modal-content">

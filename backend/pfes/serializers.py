@@ -38,8 +38,6 @@ class RapporteurSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         if value:
-            if not value.endswith('@gmail.com'):
-                raise serializers.ValidationError("L'email doit se terminer par @gmail.com.")
             queryset = Rapporteur.objects.filter(email=value)
             if self.instance:
                 queryset = queryset.exclude(pk=self.instance.pk)

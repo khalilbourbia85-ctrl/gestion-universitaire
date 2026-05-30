@@ -1,21 +1,30 @@
 from django.db import models
 from decimal import Decimal
 
-
+# =========================
+# Modèle Département
+# =========================
 class Departement(models.Model):
-    """Modèle pour gérer les départements académiques"""
-    nom = models.CharField(max_length=255, unique=True)
-    code = models.CharField(max_length=50, unique=True)
-    description = models.TextField(blank=True, null=True)
-    responsable = models.CharField(max_length=255, blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
-    telephone = models.CharField(max_length=20, blank=True, null=True)
-    photo = models.FileField(upload_to='departements_photos/', blank=True, null=True)
+    """
+    Représente un département académique.
+    Contient les informations générales du département
+    comme le nom, le code, le responsable et les coordonnées.
+    """
+
+    nom = models.CharField(max_length=255, unique=True)  # Nom du département
+    code = models.CharField(max_length=50, unique=True)  # Code unique du département
+    description = models.TextField(blank=True, null=True)  # Description optionnelle
+    responsable = models.CharField(max_length=255, blank=True, null=True)  # Responsable du département
+    email = models.EmailField(blank=True, null=True)  # Email de contact
+    telephone = models.CharField(max_length=20, blank=True, null=True)  # Numéro de téléphone
+    photo = models.FileField(upload_to='departements_photos/', blank=True, null=True)  # Photo du département
+
+    # Dates automatiques
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['nom']
+        ordering = ['nom']  # Tri alphabétique
         verbose_name = "Département"
         verbose_name_plural = "Départements"
 
@@ -23,15 +32,30 @@ class Departement(models.Model):
         return f"{self.nom} ({self.code})"
 
 
+# =========================
+# Modèle Licence
+# =========================
 class Licence(models.Model):
-    """Modèle pour gérer les licences académiques"""
+    """
+    Représente une licence universitaire.
+    Chaque licence appartient à un département.
+    """
+
     nom = models.CharField(max_length=255, unique=True)
     domaine = models.CharField(max_length=255, blank=True, null=True)
     mention = models.CharField(max_length=255, blank=True, null=True)
     parcours = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
+
     duree = models.CharField(max_length=50, default="3 ans")
-    departement = models.ForeignKey(Departement, on_delete=models.CASCADE, related_name='licences')
+
+    # Relation plusieurs licences -> un département
+    departement = models.ForeignKey(
+        Departement,
+        on_delete=models.CASCADE,
+        related_name='licences'
+    )
+
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
 
@@ -40,12 +64,27 @@ class Licence(models.Model):
         verbose_name = "Licence"
         verbose_name_plural = "Licences"
 
+
+# =========================
+# Modèle Spécialité
+# =========================
 class Specialite(models.Model):
-    """Modèle pour gérer les spécialités au sein des licences"""
+    """
+    Représente une spécialité rattachée à une licence.
+    Exemple : Informatique de Gestion.
+    """
+
     nom = models.CharField(max_length=255)
     code = models.CharField(max_length=50, unique=True)
     description = models.TextField(blank=True, null=True)
-    licence = models.ForeignKey(Licence, on_delete=models.CASCADE, related_name='specialites')
+
+    # Relation plusieurs spécialités -> une licence
+    licence = models.ForeignKey(
+        Licence,
+        on_delete=models.CASCADE,
+        related_name='specialites'
+    )
+
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
 
@@ -53,14 +92,24 @@ class Specialite(models.Model):
         ordering = ['nom']
         verbose_name = "Spécialité"
         verbose_name_plural = "Spécialités"
+
+        # Empêche deux spécialités ayant le même nom dans une même licence
         unique_together = ['nom', 'licence']
 
     def __str__(self):
         return f"{self.nom} ({self.code}) - {self.licence.nom}"
 
 
+# =========================
+# Modèle Module (UE)
+# =========================
 class Module(models.Model):
-    """Modèle pour gérer les modules académiques"""
+    """
+    Représente une Unité d'Enseignement (UE).
+    Contient les matières (ECUEs), crédits et coefficients.
+    """
+
+    # Liste des semestres disponibles
     SEMESTRE_CHOICES = [
         ('S1', 'Semestre 1'),
         ('S2', 'Semestre 2'),
@@ -69,69 +118,120 @@ class Module(models.Model):
         ('S5', 'Semestre 5'),
         ('S6', 'Semestre 6'),
     ]
-    
+
+    # Liste des années de licence
     ANNEE_CHOICES = [
         ('L1', 'Licence 1'),
         ('L2', 'Licence 2'),
         ('L3', 'Licence 3'),
     ]
-    
-    nom = models.CharField(max_length=255, verbose_name="Unité d'Enseignement (UE)")
+
+    nom = models.CharField(
+        max_length=255,
+        verbose_name="Unité d'Enseignement (UE)"
+    )
+
     code = models.CharField(max_length=50, blank=True, null=True)
-    
-    # Matieres (ECUEs) - List of objects: { nom, vh_c, vh_td, vh_ci, credit, coefficient }
-    matieres = models.JSONField(default=list, blank=True, help_text="Liste des matières (ECUEs) avec leurs volumes, crédits et coefficients")
-    
-    # Totaux UE
-    credit_ue = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Crédits (Total UE)")
-    coefficient_ue = models.DecimalField(max_digits=5, decimal_places=2, default=1, help_text="Coefficient (Total UE)")
-    
+
+    # Stockage des matières sous format JSON
+    matieres = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Liste des matières (ECUEs)"
+    )
+
+    # Informations globales de l'UE
+    credit_ue = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    coefficient_ue = models.DecimalField(max_digits=5, decimal_places=2, default=1)
+
     semestre = models.CharField(max_length=10, choices=SEMESTRE_CHOICES)
     annee = models.CharField(max_length=10, choices=ANNEE_CHOICES)
-    licence = models.ForeignKey(Licence, on_delete=models.CASCADE, related_name='modules')
-    specialite = models.ForeignKey(Specialite, on_delete=models.CASCADE, related_name='modules', null=True, blank=True)
+
+    # Relations
+    licence = models.ForeignKey(
+        Licence,
+        on_delete=models.CASCADE,
+        related_name='modules'
+    )
+
+    specialite = models.ForeignKey(
+        Specialite,
+        on_delete=models.CASCADE,
+        related_name='modules',
+        null=True,
+        blank=True
+    )
+
     description = models.TextField(blank=True, null=True)
+
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['annee', 'semestre', 'nom']
-        verbose_name = "Module"
-        verbose_name_plural = "Modules"
 
     def __str__(self):
         return f"{self.nom} ({self.code}) - {self.specialite.nom} - {self.semestre}"
 
 
+# =========================
+# Modèle UEElement (ECUE)
+# =========================
 class UEElement(models.Model):
-    """Élément constitutif d'une UE / matière à affecter à un enseignant."""
-    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='ue_elements')
+    """
+    Représente une matière (ECUE) appartenant à une UE.
+    Permet également l'affectation d'un enseignant.
+    """
+
+    # Relation plusieurs ECUEs -> une UE
+    module = models.ForeignKey(
+        Module,
+        on_delete=models.CASCADE,
+        related_name='ue_elements'
+    )
+
     nom = models.CharField(max_length=255)
     code = models.CharField(max_length=50, blank=True, null=True)
+
     coefficient = models.DecimalField(max_digits=5, decimal_places=2, default=1)
     credit = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    vh_c = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='Volume horaire Cours')
-    vh_td = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='Volume horaire TD')
-    vh_tp = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='Volume horaire TP')
-    vh_ci = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='Volume horaire CI')
-    sections = models.PositiveIntegerField(default=1, verbose_name='Nombre de sections')
-    groupes_td = models.PositiveIntegerField(default=1, verbose_name='Nombre de groupes TD')
-    sous_groupes_tp = models.PositiveIntegerField(default=1, verbose_name='Nombre de sous-groupes TP')
-    etudiants = models.PositiveIntegerField(default=0, verbose_name='Nombre d\'étudiants')
-    enseignant = models.ForeignKey('enseignants.Enseignant', on_delete=models.SET_NULL, null=True, blank=True, related_name='ue_elements')
+
+    # Volumes horaires
+    vh_c = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    vh_td = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    vh_tp = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    vh_ci = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+
+    # Organisation pédagogique
+    sections = models.PositiveIntegerField(default=1)
+    groupes_td = models.PositiveIntegerField(default=1)
+    sous_groupes_tp = models.PositiveIntegerField(default=1)
+
+    etudiants = models.PositiveIntegerField(default=0)
+
+    # Enseignant affecté
+    enseignant = models.ForeignKey(
+        'enseignants.Enseignant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ue_elements'
+    )
+
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['module__nom', 'nom']
-        verbose_name = "Élément UE"
-        verbose_name_plural = "Éléments UE"
 
     def __str__(self):
-        label = self.nom or 'Élément UE'
-        return f"{label} - {self.module.nom}"
+        return f"{self.nom} - {self.module.nom}"
 
     def total_heures(self):
+        """
+        Calcule automatiquement la charge horaire totale
+        selon le nombre de sections, groupes TD et TP.
+        """
         return (
             (self.vh_c or Decimal(0)) * (self.sections or 0)
             + (self.vh_td or Decimal(0)) * (self.groupes_td or 0)
@@ -139,24 +239,47 @@ class UEElement(models.Model):
             + (self.vh_ci or Decimal(0)) * (self.sections or 0)
         )
 
+
+# =========================
+# Modèle AffectationDetail
+# =========================
 class AffectationDetail(models.Model):
+    """
+    Permet de détailler l'affectation des enseignants
+    par matière et type d'enseignement.
+    """
+
     TYPE_CHOICES = [
         ('C', 'Cours'),
         ('TD', 'TD'),
         ('TP', 'TP'),
         ('CI', 'Cours Intégré')
     ]
-    ue_element = models.ForeignKey(UEElement, on_delete=models.CASCADE, related_name='affectations_details')
-    enseignant = models.ForeignKey('enseignants.Enseignant', on_delete=models.CASCADE, related_name='affectations_details')
+
+    # Matière concernée
+    ue_element = models.ForeignKey(
+        UEElement,
+        on_delete=models.CASCADE,
+        related_name='affectations_details'
+    )
+
+    # Enseignant affecté
+    enseignant = models.ForeignKey(
+        'enseignants.Enseignant',
+        on_delete=models.CASCADE,
+        related_name='affectations_details'
+    )
+
     type_cours = models.CharField(max_length=2, choices=TYPE_CHOICES)
+
+    # Groupe concerné
     groupe = models.CharField(max_length=50, blank=True, null=True)
-    
+
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Détail d'affectation"
-        verbose_name_plural = "Détails d'affectation"
+        # Empêche la duplication d'affectation
         unique_together = ['ue_element', 'type_cours', 'groupe']
 
     def __str__(self):
