@@ -530,6 +530,47 @@ class LicenceViewSet(viewsets.ModelViewSet):
             )
         return Licence.objects.none()
 
+    def perform_create(self, serializer):
+        """Créer une Licence et sa Spécialité automatiquement si specialite est fournie"""
+        licence = serializer.save()
+        
+        # Si un nom de spécialité est fourni, créer automatiquement la Spécialité
+        specialite_nom = self.request.data.get('specialite', '').strip()
+        if specialite_nom:
+            # Créer une spécialité avec le même nom que la licence
+            Specialite.objects.get_or_create(
+                nom=specialite_nom,
+                licence=licence,
+                defaults={
+                    'code': f"{licence.nom[:3].upper()}-{specialite_nom[:3].upper()}",
+                    'description': f"Spécialité {specialite_nom} de {licence.nom}"
+                }
+            )
+
+    def perform_update(self, serializer):
+        """Modifier une Licence et créer/mettre à jour sa Spécialité automatiquement"""
+        licence = serializer.save()
+        
+        # Si un nom de spécialité est fourni, créer ou mettre à jour la Spécialité
+        specialite_nom = self.request.data.get('specialite', '').strip()
+        if specialite_nom:
+            # Créer ou mettre à jour la spécialité
+            specialite, created = Specialite.objects.get_or_create(
+                licence=licence,
+                defaults={
+                    'nom': specialite_nom,
+                    'code': f"{licence.nom[:3].upper()}-{specialite_nom[:3].upper()}",
+                    'description': f"Spécialité {specialite_nom} de {licence.nom}"
+                }
+            )
+            # Si elle existe déjà, mettre à jour le nom
+            if not created:
+                specialite.nom = specialite_nom
+                specialite.save()
+        else:
+            # Si specialite est vide, supprimer les spécialités existantes de cette licence
+            Specialite.objects.filter(licence=licence).delete()
+
     @action(detail=False, methods=['post'], url_path='import-excel')
     def import_excel(self, request):
         """Import licenses from Excel or CSV file"""

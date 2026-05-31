@@ -5,6 +5,7 @@ import EtudiantsTable from "../components/EtudiantsTable";
 import EtudiantForm from "../components/EtudiantForm";
 import MultiSelectDropdown from "../components/MultiSelectDropdown";
 import { parseFile } from "../utils/fileParser";
+import useAcademicData from "../hooks/useAcademicData";
 import "./GestionEtudiants.css";
 
 function GestionEtudiants() {
@@ -18,9 +19,10 @@ function GestionEtudiants() {
   const [error, setError] = useState(""); // msg erreur
   const [loading, setLoading] = useState(true); // en attente API?
   const [importPreview, setImportPreview] = useState(null); // aperçu import
-  const [licences, setLicences] = useState([]); // listes dropdowns
-  const [specialites, setSpecialites] = useState([]);
   const [selectedEtudiants, setSelectedEtudiants] = useState(new Set()); // sélection multiple
+
+  // Utiliser le hook pour licences et spécialités (auto-refresh 30s)
+  const { licences, specialites, refresh: refreshAcademicData } = useAcademicData(30000);
 
   // Année universitaire par défaut selon mois courant
   const currentMonth = new Date().getMonth();
@@ -36,29 +38,18 @@ function GestionEtudiants() {
   // Référence input file caché pour import
   const fileRef = useRef(null);
 
-  // Charger les données (étudiants, licences, spécialités)
-  const loadData = async () => {
+  // Charger UNIQUEMENT les étudiants (licences/specialites viennent du hook)
+  const loadEtudiants = async () => {
     setLoading(true);
     setError("");
 
     try {
-      // Appels API parallèles
-      const [etRes, licRes, specRes] = await Promise.all([
-        axios.get("etudiants/?page_size=200"),
-        axios.get("licences/").catch(() => ({ data: [] })),
-        axios.get("specialites/").catch(() => ({ data: [] })),
-      ]);
-
+      const etRes = await axios.get("etudiants/?page_size=200");
       setEtudiants(Array.isArray(etRes.data) ? etRes.data : (etRes.data?.results || []));
-      setLicences(Array.isArray(licRes.data) ? licRes.data : []);
-      setSpecialites(Array.isArray(specRes.data) ? specRes.data : []);
-
     } catch (err) {
       const message = err.response?.data?.detail || err.response?.data?.error || err.message || "Erreur chargement";
       console.error("Erreur:", err);
       setError(message);
-      setLicences([]);
-      setSpecialites([]);
     } finally {
       setLoading(false);
     }
@@ -66,7 +57,7 @@ function GestionEtudiants() {
 
   // Exécuter au montage du composant
   useEffect(() => {
-    loadData();
+    loadEtudiants();
   }, []);
 
   // Créer ou modifier un étudiant
@@ -89,7 +80,8 @@ function GestionEtudiants() {
         setSuccessMessage("✅ Étudiant ajouté avec succès");
       }
 
-      await loadData();
+      await loadEtudiants();
+      refreshAcademicData();
       setSelected(null);
       setShowForm(false);
 
@@ -196,7 +188,8 @@ function GestionEtudiants() {
           }
         }
         
-        await loadData();
+        await loadEtudiants();
+        refreshAcademicData();
         setTimeout(() => setSuccessMessage(""), 5000);
       } else {
         setError(response.data.error || response.data.message || "❌ Erreur lors de l'import");
@@ -225,7 +218,8 @@ function GestionEtudiants() {
       setError("");
       await axios.delete(`etudiants/${idEtudiant}/`);
       setSuccessMessage("✅ Étudiant supprimé");
-      await loadData();
+      await loadEtudiants();
+      refreshAcademicData();
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
       const message = err.response?.data?.detail || err.response?.data?.message || err.message || "❌ Erreur suppression";
@@ -295,7 +289,8 @@ const handleDeleteMultiple = async () => {
     setSelectedEtudiants(new Set());
 
     // Recharger les données depuis l'API
-    await loadData();
+    await loadEtudiants();
+    refreshAcademicData();
 
     // Masquer le message après 3 secondes
     setTimeout(() => setSuccessMessage(""), 3000);

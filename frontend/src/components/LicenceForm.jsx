@@ -5,7 +5,7 @@ const LicenceForm = ({ onSubmit, selectedLicence, onCancel, departements }) => {
   const [formData, setFormData] = useState({
     nom: selectedLicence?.nom || '',
     domaine: selectedLicence?.domaine || '',
-    parcours: selectedLicence?.parcours || '',
+    specialite: selectedLicence?.specialite || '',
     description: selectedLicence?.description || '',
     duree: selectedLicence?.duree || '3 ans',
     departement: selectedLicence?.departement || '',
@@ -44,7 +44,7 @@ const LicenceForm = ({ onSubmit, selectedLicence, onCancel, departements }) => {
     setFormData({
       nom: '',
       domaine: '',
-      parcours: '',
+      specialite: '',
       description: '',
       duree: '3 ans',
       departement: '',
@@ -79,11 +79,11 @@ const LicenceForm = ({ onSubmit, selectedLicence, onCancel, departements }) => {
         </div>
 
         <div className="input-group">
-          <label>Parcours (Spécialités)</label>
+          <label>Spécialité</label>
           <input
             type="text"
-            name="parcours"
-            value={formData.parcours}
+            name="specialite"
+            value={formData.specialite}
             onChange={handleChange}
           />
         </div>

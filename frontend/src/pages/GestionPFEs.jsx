@@ -4,6 +4,7 @@
   import PFEsTable from '../components/PFEsTable'; // Tableau d'affichage des PFE
   import PFEForm from '../components/PFEForm'; // Formulaire de création/édition de PFE
   import AffectationKanban from '../components/AffectationKanban'; // Vue Kanban pour l'affectation
+  import useAcademicData from '../hooks/useAcademicData'; // Hook pour licences/spécialités avec auto-refresh
   import './GestionEtudiants.css'; // Styles CSS partagés
 
 
@@ -62,8 +63,9 @@
     const [pfes, setPFEs] = useState([]);        // Liste des PFE
     const [enseignants, setEnseignants] = useState([]); // Liste des encadrants
     const [etudiants, setEtudiants] = useState([]);     // Liste des étudiants
-    const [specialites, setSpecialites] = useState([]); // Spécialités disponibles
-    const [licences, setLicences] = useState([]);       // Licences disponibles
+    
+    // Utiliser le hook pour licences et spécialités (auto-refresh 30s)
+    const { licences, specialites, refresh: refreshAcademicData } = useAcademicData(30000);
     
     // === ÉTATS UI ===
     const [selectedPFE, setSelectedPFE] = useState(null); // PFE en édition
@@ -155,8 +157,8 @@
     );
 
     // === FONCTION: Charger toutes les données du backend ===
-    // Récupère depuis l'API: PFE, enseignants, étudiants, spécialités, licences et paramètres globaux
-    // Met à jour tous les états principaux et affiche un spinner pendant le chargement
+    // Récupère depuis l'API: PFE, enseignants, étudiants et paramètres globaux
+    // Spécialités et licences viennent du hook useAcademicData (auto-refresh 30s)
     const loadData = async () => {
       // Afficher le spinner de chargement
       setLoading(true);
@@ -166,19 +168,15 @@
       try {
         // Utiliser Promise.all pour charger toutes les ressources en parallèle (plus rapide)
         // Chaque requête axios fait une requête GET à l'API
-        const [pfeRes, enseignantRes, etudiantRes, paramRes, specialitesRes, licencesRes] = await Promise.all([
+        const [pfeRes, enseignantRes, etudiantRes, paramRes] = await Promise.all([
           // Récupérer tous les PFE
           axios.get('pfes/'),
           // Récupérer tous les enseignants (avec leurs plafonds individuels)
           axios.get('enseignants/'),
           // Récupérer tous les étudiants
           axios.get('etudiants/'),
-          // Récupérer les paramètres globaux (plafond global, etc.)          // .catch() retourne un objet par défaut si la requête échoue
+          // Récupérer les paramètres globaux (plafond global, etc.)
           axios.get('pfes/parametres/').catch(() => ({ data: { plafond_groupes: 5 } })),
-          // Récupérer toutes les spécialités disponibles          // .catch() retourne un tableau vide si la requête échoue
-          axios.get('specialites/').catch(() => ({ data: [] })),
-          // Récupérer toutes les licences disponibles          // .catch() retourne un tableau vide si la requête échoue
-          axios.get('licences/').catch(() => ({ data: [] })),
         ]);
 
         // Définir les données reçues dans les états
@@ -204,12 +202,9 @@
         );
         // Mettre à jour la liste des étudiants
         setEtudiants(Array.isArray(etudiantRes.data) ? etudiantRes.data : []);
-        // Mettre à jour la liste des spécialités
-        setSpecialites(Array.isArray(specialitesRes.data) ? specialitesRes.data : []);
-        // Mettre à jour la liste des licences
-        setLicences(Array.isArray(licencesRes.data) ? licencesRes.data : []);
         
-        // === Mettre à jour le plafond global ===        // Valider et limiter le plafond reçu du backend (entre 1 et 99)
+        // === Mettre à jour le plafond global ===
+        // Valider et limiter le plafond reçu du backend (entre 1 et 99)
         const pg = clampPlafondInput(paramRes?.data?.plafond_groupes ?? 5);
         // Mettre à jour l'état du plafond global
         setPlafondGroupes(pg);
@@ -235,6 +230,7 @@
     useEffect(() => {
       // Appeler la fonction de chargement des données
       loadData();
+      refreshAcademicData();
     }, []); // Tableau de dépendances vide = s'exécute une seule fois
 
 
@@ -398,6 +394,7 @@
         handleCloseForm();
         // Recharger les données du backend pour refléter les changements
         loadData();
+        refreshAcademicData();
       } catch (err) {
         // Afficher l'erreur complète dans la console pour déboguer
         console.error('Erreur API complète:', err);
@@ -510,6 +507,8 @@
       } catch (err) {
         const errorDetail = err.response?.data?.detail || err.response?.data?.errors || err.message;
         setError(`Erreur ${err.response?.status || 'inconnue'}: ${JSON.stringify(errorDetail)}`);
+      } finally {
+        refreshAcademicData();
       }
     };
 
@@ -693,6 +692,7 @@
 
     // Recharger et afficher le résultat
     await loadData();
+    refreshAcademicData();
     if (assignedCount > 0) {
       setMessage(`✅ Assignation globale terminée: ${assignedCount} PFE(s) assigné(s)${skippedCount > 0 ? `, ${skippedCount} ignoré(s)` : ''}`);
       setError('');
@@ -811,6 +811,7 @@
     // === ÉTAPE 4: Recharger les données depuis le backend ===
     // Attendre que la fonction async se termine
     await loadData();
+    refreshAcademicData();
 
     // === ÉTAPE 5: Afficher le message de résultat ===
     // Si au moins un PFE a été réassigné
@@ -958,6 +959,7 @@
       setMessage(`Import réussi : ${response.data.created.length} PFE(s) ajoutés.`);
       setError('');
       loadData();
+      refreshAcademicData();
     } catch (err) {
       setError(err.response?.data?.errors || err.response?.data?.detail || 'Erreur d\'import Excel.');
     } finally {

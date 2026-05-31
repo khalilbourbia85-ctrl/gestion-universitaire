@@ -42,7 +42,7 @@ class LicenceSerializer(serializers.ModelSerializer):
 
         fields = [
             'id', 'nom', 'domaine', 'mention',
-            'parcours', 'description', 'duree',
+            'specialite', 'description', 'duree',
             'departement', 'departement_nom',
             'date_creation', 'date_modification'
         ]

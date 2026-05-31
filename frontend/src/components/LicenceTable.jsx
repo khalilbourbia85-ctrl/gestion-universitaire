@@ -12,7 +12,7 @@ const LicenceTable = ({ licences, onEdit, onDelete, filterBy = ['Tous les champs
           <th>ID</th>
           {showField('Mention') && <th>Mention</th>}
           {showField('Domaine') && <th>Domaine</th>}
-          {showField('Parcours') && <th>Parcours</th>}
+          {showField('Spécialité') && <th>Spécialité</th>}
           {showField('Département') && <th>Département</th>}
           {filterBy.includes('Tous les champs') && <th>Durée</th>}
           <th>Actions</th>
@@ -25,7 +25,7 @@ const LicenceTable = ({ licences, onEdit, onDelete, filterBy = ['Tous les champs
               <td>{lic.id}</td>
               {showField('Mention') && <td>{lic.nom}</td>}
               {showField('Domaine') && <td>{lic.domaine}</td>}
-              {showField('Parcours') && <td>{lic.parcours}</td>}
+              {showField('Spécialité') && <td>{lic.specialite}</td>}
               {showField('Département') && <td>{lic.departement_nom}</td>}
               {filterBy.includes('Tous les champs') && <td>{lic.duree}</td>}
               <td className="actions">

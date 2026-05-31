@@ -54,7 +54,7 @@ const GestionLicences = () => {
           return (
             lic.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (lic.domaine && lic.domaine.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (lic.parcours && lic.parcours.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (lic.specialite && lic.specialite.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (lic.departement_nom && lic.departement_nom.toLowerCase().includes(searchTerm.toLowerCase()))
           );
         } else {
@@ -64,8 +64,8 @@ const GestionLicences = () => {
                 return lic.nom.toLowerCase().includes(searchTerm.toLowerCase());
               case 'Domaine':
                 return lic.domaine && lic.domaine.toLowerCase().includes(searchTerm.toLowerCase());
-              case 'Parcours':
-                return lic.parcours && lic.parcours.toLowerCase().includes(searchTerm.toLowerCase());
+              case 'Spécialité':
+                return lic.specialite && lic.specialite.toLowerCase().includes(searchTerm.toLowerCase());
               case 'Département':
                 return lic.departement_nom && lic.departement_nom.toLowerCase().includes(searchTerm.toLowerCase());
               default:
@@ -151,8 +151,8 @@ const GestionLicences = () => {
         if (norm.includes("domaine")) {
           return "domaine";
         }
-        if (norm.includes("parcours")) {
-          return "parcours";
+        if (norm.includes("specialite") || norm.includes("spécialité")) {
+          return "specialite";
         }
         if (norm.includes("departement") || norm.includes("dep")) {
           return "departement";
@@ -242,7 +242,7 @@ const GestionLicences = () => {
                 "Tous les champs",
                 "Mention",
                 "Domaine",
-                "Parcours",
+                "Spécialité",
                 "Département"
               ]}
               selected={filterBy}
