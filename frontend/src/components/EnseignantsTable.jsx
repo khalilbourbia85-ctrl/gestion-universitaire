@@ -1,9 +1,19 @@
 import React from "react";
 import "./Table.css";
 
-function EnseignantsTable({ enseignants, onEdit, onDelete, filterBy = ['Tous les champs'], selectedEnseignants = new Set(), onToggleSelect }) {
+function EnseignantsTable({ enseignants, onEdit, onDelete, filterBy = ['Tous les champs'], selectedEnseignants = new Set(), onToggleSelect, pfes = [] }) {
 
 const showField = (field) => Array.isArray(filterBy) ? (filterBy.includes('Tous les champs') || filterBy.includes(field)) : (filterBy === 'Tous les champs' || filterBy === field);
+
+// Compter les PFEs encadrés par un enseignant
+const getEncadredPfeCount = (matricule) => {
+  return pfes.filter(pfe => pfe.encadrant === matricule || pfe.encadrant_id === matricule).length;
+};
+
+// Vérifier si suppression possible
+const canDelete = (matricule) => {
+  return getEncadredPfeCount(matricule) === 0;
+};
 
 return(
 
@@ -45,6 +55,7 @@ return(
   {filterBy === 'Tous les champs' && <th>📄 Type contrat</th>}
   {filterBy === 'Tous les champs' && <th>⚙️ Statut Administratif</th>}
   {filterBy === 'Tous les champs' && <th>🎓 Diplôme</th>}
+  {filterBy === 'Tous les champs' && <th>📚 PFEs encadrés</th>}
   <th>⚙️ Actions</th>
 </tr>
 
@@ -73,6 +84,14 @@ return(
 {filterBy === 'Tous les champs' && <td>{e.typeContrat}</td>}
 {filterBy === 'Tous les champs' && <td>{e.statutAdministratif}</td>}
 {filterBy === 'Tous les champs' && <td>{e.diplome?.libelleDiplome}</td>}
+{filterBy === 'Tous les champs' && (
+  <td style={{ 
+    fontWeight: 'bold', 
+    color: getEncadredPfeCount(e.matricule) > 0 ? '#d97706' : '#10b981'
+  }}>
+    {getEncadredPfeCount(e.matricule)} 📚
+  </td>
+)}
 
 <td>
   <span
@@ -83,7 +102,12 @@ return(
   </span>
   <span
     className="icon delete-icon"
-    onClick={() => onDelete(e.matricule)}
+    onClick={() => canDelete(e.matricule) ? onDelete(e.matricule) : null}
+    style={{
+      opacity: canDelete(e.matricule) ? 1 : 0.4,
+      cursor: canDelete(e.matricule) ? 'pointer' : 'not-allowed'
+    }}
+    title={canDelete(e.matricule) ? 'Supprimer' : `Cet enseignant encadre ${getEncadredPfeCount(e.matricule)} PFE(s)`}
   >
     🗑️
   </span>

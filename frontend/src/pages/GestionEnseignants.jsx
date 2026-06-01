@@ -33,6 +33,8 @@ function GestionEnseignants() {
   const [activeTab, setActiveTab] = useState("informations");
   // Ensemble des matricules sélectionnés pour opérations batch
   const [selectedEnseignants, setSelectedEnseignants] = useState(new Set());
+  // PFEs pour vérifier si enseignant encadre des projets
+  const [pfes, setPfes] = useState([]);
 
   const fileRef = useRef(null);
 
@@ -40,14 +42,20 @@ function GestionEnseignants() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('enseignants/');
-      setEnseignants(Array.isArray(response.data) ? response.data : []);
-      console.log('Loaded enseignants:', response.data);
+      const [ensResponse, pfeResponse] = await Promise.all([
+        axios.get('enseignants/'),
+        axios.get('pfes/').catch(() => ({ data: [] }))
+      ]);
+      setEnseignants(Array.isArray(ensResponse.data) ? ensResponse.data : []);
+      setPfes(Array.isArray(pfeResponse.data) ? pfeResponse.data : []);
+      console.log('Loaded enseignants:', ensResponse.data);
+      console.log('Loaded pfes:', pfeResponse.data);
       setErrorMessage('');
     } catch (err) {
       console.error('Erreur lors du chargement des enseignants:', err);
       setErrorMessage('Impossible de charger les enseignants');
       setEnseignants([]);
+      setPfes([]);
     } finally {
       setLoading(false);
     }
@@ -163,6 +171,18 @@ function GestionEnseignants() {
 
   // Supprimer un enseignant après confirmation
   const handleDelete = async (matricule) => {
+    // Vérifier si l'enseignant encadre des PFEs
+    const encadredPfes = pfes.filter(pfe => pfe.encadrant === matricule || pfe.encadrant_id === matricule);
+    
+    if (encadredPfes.length > 0) {
+      setErrorMessage(
+        `❌ Impossible de supprimer cet enseignant. ` +
+        `Il encadre actuellement ${encadredPfes.length} PFE(s). ` +
+        `Veuillez d'abord réassigner les PFEs à un autre encadrant.`
+      );
+      return;
+    }
+
     if (!window.confirm("Voulez-vous vraiment supprimer cet enseignant ?")) return;
     try {
       await axios.delete(`enseignants/${matricule}/`);
@@ -202,6 +222,34 @@ function GestionEnseignants() {
       return;
     }
 
+    // Vérifier quels enseignants encadrent des PFEs
+    const blockedEnseignants = [];
+    const selectedArray = Array.from(selectedEnseignants);
+    
+    for (const matricule of selectedArray) {
+      const encadredPfes = pfes.filter(pfe => pfe.encadrant === matricule || pfe.encadrant_id === matricule);
+      if (encadredPfes.length > 0) {
+        const ens = enseignants.find(e => e.matricule === matricule);
+        blockedEnseignants.push({
+          matricule,
+          nom: ens ? `${ens.nom} ${ens.prenom}` : matricule,
+          count: encadredPfes.length
+        });
+      }
+    }
+
+    // Si des enseignants sont bloqués, afficher un message d'erreur
+    if (blockedEnseignants.length > 0) {
+      const blockedList = blockedEnseignants
+        .map(e => `${e.nom} (${e.count} PFE(s))`)
+        .join(', ');
+      setErrorMessage(
+        `❌ Impossible de supprimer certains enseignants car ils encadrent des PFEs:\n${blockedList}\n` +
+        `Veuillez d'abord réassigner les PFEs.`
+      );
+      return;
+    }
+
     const confirmMsg = selectedEnseignants.size === 1 
       ? "Voulez-vous supprimer cet enseignant ?" 
       : `Voulez-vous vraiment supprimer ${selectedEnseignants.size} enseignants ?`;
@@ -213,7 +261,7 @@ function GestionEnseignants() {
       setLoading(true);
       
       // Supprimer en parallèle avec Promise.all
-      const deletePromises = Array.from(selectedEnseignants).map(matricule =>
+      const deletePromises = selectedArray.map(matricule =>
         axios.delete(`enseignants/${matricule}/`)
       );
       
@@ -469,6 +517,7 @@ function GestionEnseignants() {
           {activeTab === 'informations' && (
             <EnseignantsTable
               enseignants={filteredEnseignants}
+              pfes={pfes}
               onEdit={(e) => {
                 setSelected(e);
                 setCurrentForm({

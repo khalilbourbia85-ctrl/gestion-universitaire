@@ -410,9 +410,6 @@ const handleDeleteMultiple = async () => {
 
         {/* Boutons d'action */}
         <div className="buttons-area">
-          <button onClick={() => handleOpenForm(null)}>
-   Ajouter Étudiant
-</button>
           <button className="btn import-btn" type="button" onClick={handleImportClick} disabled={loading}>📥 Importer fichier</button>
           <button className="btn" type="button" onClick={() => handleOpenForm(null)} disabled={loading}>➕ Nouvel étudiant</button>
           <button className="btn" type="button" onClick={selectAllEtudiants} disabled={loading} style={{ backgroundColor: selectedEtudiants.size === filteredEtudiants.length && filteredEtudiants.length > 0 ? '#10b981' : '#3b82f6' }}>
