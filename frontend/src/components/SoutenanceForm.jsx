@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import FormErrorDisplay from './common/FormErrorDisplay';
 
 function pickRandomMatriculeFromList(list) {
   if (!Array.isArray(list) || list.length === 0) return '';
@@ -329,7 +330,7 @@ function SoutenanceForm({ soutenance, soutenances = [], enseignants, etudiants, 
     <div className="modal-overlay">
       <div className="modal-content">
         <h3>{soutenance ? 'Modifier la soutenance' : 'Ajouter une nouvelle soutenance'}</h3>
-        {errorMessage && <div className="success-message" style={{ background: '#e53e3e' }}>{errorMessage}</div>}
+        {errorMessage && <FormErrorDisplay message={errorMessage} />}
         <form onSubmit={handleSave}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px', padding: '10px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
             <div className="form-row" style={{ marginBottom: 0 }}>

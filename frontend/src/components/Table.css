@@ -1,66 +1,116 @@
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.table-wrapper::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
   background: white;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  margin: 20px 0;
+  margin: 0;
 }
 
 .table thead {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .table th {
-  padding: 12px 8px;
+  padding: 16px 12px;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 0.5px;
   text-align: left;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  white-space: normal !important;
+  white-space: nowrap;
+  vertical-align: middle;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .table td {
-  padding: 12px 8px;
+  padding: 14px 12px;
   font-size: 13px;
   text-align: left;
   color: #2d3748;
   border: 1px solid #e2e8f0;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  white-space: normal !important;
+  vertical-align: middle;
+  min-width: fit-content;
 }
 
 .table tbody tr {
   transition: all 0.2s ease;
+  height: auto;
 }
 
 .table tbody tr:hover {
   background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-  transform: scale(1.01);
+  box-shadow: inset 0 0 0 1px #e2e8f0;
 }
 
 .table thead th {
   color: white;
-  position: sticky;
-  top: 0;
 }
 
 .icon {
   cursor: pointer;
   font-size: 18px;
-  margin: 0 8px;
+  margin: 0 4px;
   transition: all 0.2s ease;
-  padding: 8px;
-  border-radius: 50%;
+  padding: 6px 8px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid transparent;
+}
+
+.icon:hover {
+  transform: scale(1.15);
+}
+
+.view-icon {
+  color: #667eea;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0 4px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+}
+
+.view-icon:hover {
+  transform: scale(1.15);
+  background: rgba(102, 126, 234, 0.1);
+  border-color: #667eea;
 }
 
 .edit-icon {
@@ -69,7 +119,7 @@
 
 .edit-icon:hover {
   background: #bee3f8;
-  transform: scale(1.1);
+  border-color: #3182ce;
 }
 
 .delete-icon {
@@ -78,33 +128,32 @@
 
 .delete-icon:hover {
   background: #fed7d7;
-  transform: scale(1.1);
+  border-color: #e53e3e;
 }
 
 .action-button {
   cursor: pointer;
-  border: none;
-  background: transparent;
-  color: inherit;
-  padding: 6px 10px;
-  margin-right: 8px;
-  border-radius: 8px;
-  font-size: 13px;
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #2d3748;
+  padding: 6px 12px;
+  margin-left: 4px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
   transition: all 0.2s ease;
-}
-
-.action-button.edit-icon {
-  background: rgba(66, 153, 225, 0.1);
-  color: #2b6cb0;
-}
-
-.action-button.delete-icon {
-  background: rgba(229, 62, 62, 0.1);
-  color: #c53030;
+  white-space: nowrap;
 }
 
 .action-button:hover {
-  transform: scale(1.03);
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Dark mode support */
@@ -116,6 +165,34 @@
 .dark-mode .table td {
   color: #e2e8f0;
   border-bottom-color: #4a5568;
+}
+
+.dark-mode .table tbody tr:hover {
+  background: #374151;
+}
+
+/* Responsive table for mobile */
+@media (max-width: 768px) {
+  .table th,
+  .table td {
+    padding: 12px 8px;
+    font-size: 12px;
+  }
+  
+  .table th {
+    font-size: 12px;
+  }
+  
+  .icon {
+    font-size: 16px;
+    margin: 0 2px;
+    padding: 4px 6px;
+  }
+  
+  .action-button {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
 }
 
 .dark-mode .table tbody tr:hover {

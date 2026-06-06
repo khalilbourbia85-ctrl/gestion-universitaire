@@ -57,20 +57,6 @@ class Etudiant(models.Model):
     )
 
     def delete(self, *args, **kwargs):
-        # Delete the PFE completely if the student is deleted
-        try:
-            if hasattr(self, 'pfe_assignment') and self.pfe_assignment and self.pfe_assignment.pfe:
-                self.pfe_assignment.pfe.delete()
-        except Exception:
-            pass
-        
-        # Delete any remaining soutenances linked to this student
-        try:
-            for soutenance in self.soutenances.all():
-                soutenance.delete()
-        except Exception:
-            pass
-            
         super().delete(*args, **kwargs)
 
     def __str__(self):

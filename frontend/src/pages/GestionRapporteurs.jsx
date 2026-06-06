@@ -308,7 +308,7 @@ function GestionRapporteurs() {
     <div className="main-container">
       <h2 className="page-title">Gestion des Rapporteurs</h2>
       {message && <div className="success-message">{message}</div>}
-      {error && <div className="success-message" style={{ background: '#e53e3e' }}>{error}</div>}
+      {error && <div className="error-message">{error}</div>}
 
       {loading ? (
         <div className="table-card">Chargement en cours...</div>

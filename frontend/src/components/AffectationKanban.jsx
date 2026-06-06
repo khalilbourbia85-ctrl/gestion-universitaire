@@ -1,6 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './AffectationKanban.css';
 
+const matriculeKey = (m) => {
+  if (m === null || m === undefined || typeof m === 'object') return '';
+  return String(m).trim();
+};
+
+const hasEncadrant = (pfe) => pfe?.encadrant != null && pfe.encadrant !== '';
+
+const matchesEncadrant = (pfe, matricule) =>
+  matriculeKey(pfe?.encadrant) === matriculeKey(matricule);
+
 const AffectationKanban = ({
   pfes,
   enseignants,
@@ -45,7 +55,8 @@ const AffectationKanban = ({
 
   const renderPfeCard = (pfe) => {
     const etudiantsText = (pfe.etudiants_detail || [])
-      .map(e => `${e.nom} ${e.prenom}`)
+      .map((e) => `${e.nom_fr || e.nom || ''} ${e.prenom_fr || e.prenom || ''}`.trim())
+      .filter(Boolean)
       .join(' & ');
 
     return (
@@ -86,8 +97,10 @@ const AffectationKanban = ({
       .includes(term);
 
     const matchEtudiants = (p.etudiants_detail || []).some((e) => {
-      const full1 = `${e.nom || ''} ${e.prenom || ''}`.toLowerCase();
-      const full2 = `${e.prenom || ''} ${e.nom || ''}`.toLowerCase();
+      const nom = e.nom_fr || e.nom || '';
+      const prenom = e.prenom_fr || e.prenom || '';
+      const full1 = `${nom} ${prenom}`.toLowerCase();
+      const full2 = `${prenom} ${nom}`.toLowerCase();
 
       return full1.includes(term) || full2.includes(term);
     });
@@ -96,30 +109,22 @@ const AffectationKanban = ({
   };
 
   const filteredUnassignedPfes = pfes.filter(
-    p => !p.encadrant && pfeMatches(p)
+    (p) => !hasEncadrant(p) && pfeMatches(p)
   );
 
-  const filteredEnseignants = enseignants.filter(ens => {
+  const filteredEnseignants = enseignants.filter((ens) => {
     if (!term) return true;
 
-    const full1 =
-      `${ens.nom || ''} ${ens.prenom || ''}`.toLowerCase();
+    const full1 = `${ens.nom || ''} ${ens.prenom || ''}`.toLowerCase();
+    const full2 = `${ens.prenom || ''} ${ens.nom || ''}`.toLowerCase();
 
-    const full2 =
-      `${ens.prenom || ''} ${ens.nom || ''}`.toLowerCase();
+    const matchName = full1.includes(term) || full2.includes(term);
 
-    const matchName =
-      full1.includes(term) || full2.includes(term);
-
-    const matchMatricule = String(ens.matricule || '')
-      .toLowerCase()
-      .includes(term);
+    const matchMatricule = matriculeKey(ens.matricule).toLowerCase().includes(term);
 
     if (matchName || matchMatricule) return true;
 
-    const assignedPfes = pfes.filter(
-      p => p.encadrant === ens.matricule
-    );
+    const assignedPfes = pfes.filter((p) => matchesEncadrant(p, ens.matricule));
 
     return assignedPfes.some(pfeMatches);
   });
@@ -155,7 +160,7 @@ const AffectationKanban = ({
           <div className="kanban-column-header">
             <h4 className="kanban-column-title">
               Non affectés (
-              {pfes.filter(p => !p.encadrant).length}
+              {pfes.filter((p) => !hasEncadrant(p)).length}
               )
             </h4>
           </div>
@@ -174,19 +179,12 @@ const AffectationKanban = ({
         </div>
 
         {/* Colonnes Enseignants */}
-        {filteredEnseignants.map(ens => {
-          const matricule = ens.matricule || ens.id;
-
-          const max =
-            getEncadrantMaxGroupes(matricule);
-
-          const actifs =
-            encadrantCount[matricule] || 0;
-
+        {filteredEnseignants.map((ens) => {
+          const matricule = matriculeKey(ens.matricule || ens.id);
+          const max = getEncadrantMaxGroupes(matricule);
+          const actifs = encadrantCount[matricule] || 0;
           const assignedPfes = pfes.filter(
-            p =>
-              p.encadrant === matricule &&
-              pfeMatches(p)
+            (p) => matchesEncadrant(p, matricule) && pfeMatches(p)
           );
 
           const plafondAtteint = actifs >= max;

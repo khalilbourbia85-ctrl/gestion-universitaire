@@ -418,7 +418,7 @@ function GestionEnseignants() {
     <>
       <h2 className="page-title">Gestion des enseignants</h2>
       {successMessage && <div className="success-message">{successMessage}</div>}
-      {errorMessage && <div className="success-message" style={{ background: '#e53e3e' }}>{errorMessage}</div>}
+      {errorMessage && <div className="error-message">{errorMessage}</div>}
 
       {loading ? (
         <div className="table-card">Chargement en cours...</div>
@@ -559,7 +559,7 @@ function GestionEnseignants() {
       {showForm && (
         <div className="modal-overlay">
           <div className="modal-content">
-            {errorMessage && <div className="success-message" style={{ background: '#e53e3e', marginBottom: '15px' }}>{errorMessage}</div>}
+            {errorMessage && <div className="error-message">{errorMessage}</div>}
             <EnseignantForm
               selected={selected}
               onSubmit={handleAddOrUpdate}

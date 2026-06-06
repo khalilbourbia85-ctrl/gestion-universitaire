@@ -1,7 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import "./Table.css";
+import DetailsModal from './DetailsModal';
 
 function EnseignantsTable({ enseignants, onEdit, onDelete, filterBy = ['Tous les champs'], selectedEnseignants = new Set(), onToggleSelect, pfes = [] }) {
+const [showDetailsModal, setShowDetailsModal] = useState(false);
+const [selectedEnseignant, setSelectedEnseignant] = useState(null);
 
 const showField = (field) => Array.isArray(filterBy) ? (filterBy.includes('Tous les champs') || filterBy.includes(field)) : (filterBy === 'Tous les champs' || filterBy === field);
 
@@ -17,6 +20,8 @@ const canDelete = (matricule) => {
 
 return(
 
+<>
+<div className="table-wrapper">
 <table className="table">
 
 <thead>
@@ -95,6 +100,16 @@ return(
 
 <td>
   <span
+    className="view-icon"
+    onClick={() => {
+      setSelectedEnseignant(e);
+      setShowDetailsModal(true);
+    }}
+    title="Voir les détails"
+  >
+    👁️
+  </span>
+  <span
     className="icon edit-icon"
     onClick={() => onEdit(e)}
   >
@@ -120,7 +135,30 @@ return(
 </tbody>
 
 </table>
-
+</div>
+<DetailsModal
+  isOpen={showDetailsModal}
+  onClose={() => {
+    setShowDetailsModal(false);
+    setSelectedEnseignant(null);
+  }}
+  title={selectedEnseignant ? `Détails - ${selectedEnseignant.nom} ${selectedEnseignant.prenom}` : 'Détails'}
+  details={selectedEnseignant ? {
+    'Matricule': selectedEnseignant.matricule,
+    'CIN': selectedEnseignant.cin,
+    'Nom': selectedEnseignant.nom,
+    'Prénom': selectedEnseignant.prenom,
+    'Email': selectedEnseignant.email,
+    'Téléphone': selectedEnseignant.numTel,
+    'Grade': selectedEnseignant.grade,
+    'Date Recrutement': selectedEnseignant.dateRecrutement,
+    'Type Contrat': selectedEnseignant.typeContrat,
+    'Statut Administratif': selectedEnseignant.statutAdministratif,
+    'Diplôme': selectedEnseignant.diplome?.libelleDiplome,
+    'PFEs Encadrés': getEncadredPfeCount(selectedEnseignant.matricule),
+  } : {}}
+/>
+</>
 );
 
 }

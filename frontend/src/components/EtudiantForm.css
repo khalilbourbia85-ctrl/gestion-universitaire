@@ -147,18 +147,17 @@ body:not(.dark-mode) .form-title {
   color: #9ca3af;
 }
 
-.success-message {
+.success-message--toast {
   text-align: center;
   margin-bottom: 15px;
   padding: 10px;
-  background-color: #16a34a; /* vert */
+  background-color: #16a34a;
   color: white;
   border-radius: 8px;
   font-weight: 500;
   animation: fadeInOut 3s forwards;
 }
 
-/* animation fade pour faire disparaître doucement */
 @keyframes fadeInOut {
   0% { opacity: 0; }
   10% { opacity: 1; }

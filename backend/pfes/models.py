@@ -65,6 +65,7 @@ class PFE(models.Model):
         null=True,
         blank=True
     )
+    
     etudiants = models.ManyToManyField(
         Etudiant,
         through='PFEStudent',
@@ -145,5 +146,14 @@ class Soutenance(models.Model):
     def __str__(self):
         return f"Soutenance {self.idSoutenance} - {self.date_soutenance}"
 
-    class Meta:
+    def save(self, *args, **kwargs):
+        """
+        Applique une durée par défaut de 60 minutes si elle n'est pas spécifiée.
+        Cela garantit que chaque soutenance a une durée définie pour les vérifications de conflit d'horaires.
+        """
+        if self.duree is None:
+            self.duree = 60  # 60 minutes par défaut
+        super().save(*args, **kwargs)
+
+    class Meta: 
         ordering = ['-date_soutenance', '-heure_soutenance']

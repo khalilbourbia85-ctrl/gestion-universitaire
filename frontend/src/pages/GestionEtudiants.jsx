@@ -20,6 +20,7 @@ function GestionEtudiants() {
   const [loading, setLoading] = useState(true); // en attente API?
   const [importPreview, setImportPreview] = useState(null); // aperçu import
   const [selectedEtudiants, setSelectedEtudiants] = useState(new Set()); // sélection multiple
+  const [pfes, setPfes] = useState([]);
 
   // Utiliser le hook pour licences et spécialités (auto-refresh 30s)
   const { licences, specialites, refresh: refreshAcademicData } = useAcademicData(30000);
@@ -38,14 +39,18 @@ function GestionEtudiants() {
   // Référence input file caché pour import
   const fileRef = useRef(null);
 
-  // Charger UNIQUEMENT les étudiants (licences/specialites viennent du hook)
+  // Charger les étudiants et les PFE (pour bloquer la suppression si affectation active)
   const loadEtudiants = async () => {
     setLoading(true);
     setError("");
 
     try {
-      const etRes = await axios.get("etudiants/?page_size=200");
+      const [etRes, pfeRes] = await Promise.all([
+        axios.get("etudiants/?page_size=200"),
+        axios.get("pfes/").catch(() => ({ data: [] })),
+      ]);
       setEtudiants(Array.isArray(etRes.data) ? etRes.data : (etRes.data?.results || []));
+      setPfes(Array.isArray(pfeRes.data) ? pfeRes.data : (pfeRes.data?.results || []));
     } catch (err) {
       const message = err.response?.data?.detail || err.response?.data?.error || err.message || "Erreur chargement";
       console.error("Erreur:", err);
@@ -53,6 +58,54 @@ function GestionEtudiants() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getStudentIdsFromPfe = (pfe) => {
+    const ids = new Set();
+    const details = Array.isArray(pfe?.etudiants_detail) ? pfe.etudiants_detail : [];
+    details.forEach((student) => {
+      const id = student?.idEtudiant ?? student?.id;
+      if (id != null) ids.add(Number(id));
+    });
+    const raw = Array.isArray(pfe?.etudiants) ? pfe.etudiants : [];
+    raw.forEach((student) => {
+      const id = typeof student === 'object'
+        ? (student?.idEtudiant ?? student?.id)
+        : student;
+      if (id != null) ids.add(Number(id));
+    });
+    return ids;
+  };
+
+  const getPfeDeletionBlockMessage = (idEtudiant) => {
+    const studentId = Number(idEtudiant);
+    for (const pfe of pfes) {
+      const studentIds = getStudentIdsFromPfe(pfe);
+      if (!studentIds.has(studentId)) continue;
+
+      const partners = (pfe.etudiants_detail || []).filter(
+        (student) => Number(student?.idEtudiant ?? student?.id) !== studentId
+      );
+
+      if (partners.length > 0) {
+        const partnerNames = partners
+          .map((student) => `${student.nom_fr || student.nom || ''} ${student.prenom_fr || student.prenom || ''}`.trim())
+          .filter(Boolean)
+          .join(', ');
+        return (
+          `Impossible de supprimer cet étudiant : il est affecté au PFE n°${pfe.idPfe} ` +
+          `(${pfe.sujet}) en binôme avec ${partnerNames}. ` +
+          `Supprimez d'abord ce PFE depuis la page Gestion des PFE, puis supprimez l'étudiant.`
+        );
+      }
+
+      return (
+        `Impossible de supprimer cet étudiant : il est affecté au PFE n°${pfe.idPfe} ` +
+        `(${pfe.sujet}). Supprimez d'abord ce PFE depuis la page Gestion des PFE, ` +
+        `puis supprimez l'étudiant.`
+      );
+    }
+    return null;
   };
 
   // Exécuter au montage du composant
@@ -212,6 +265,12 @@ function GestionEtudiants() {
 
   // Supprimer un étudiant
   const handleDelete = async (idEtudiant) => {
+    const blockMessage = getPfeDeletionBlockMessage(idEtudiant);
+    if (blockMessage) {
+      setError(blockMessage);
+      return;
+    }
+
     if (!window.confirm("⚠️ Confirmer la suppression?")) return;
 
     try {
@@ -252,52 +311,60 @@ function GestionEtudiants() {
 // =======================================
 const handleDeleteMultiple = async () => {
 
-  // Vérifier qu'au moins un étudiant est sélectionné
   if (selectedEtudiants.size === 0) {
     setError("❌ Sélectionnez au moins un étudiant");
     return;
   }
 
-  // Construire le message de confirmation
+  const blocked = Array.from(selectedEtudiants)
+    .map((id) => ({ id, message: getPfeDeletionBlockMessage(id) }))
+    .filter((item) => item.message);
+
+  if (blocked.length > 0) {
+    setError(
+      blocked.length === 1
+        ? blocked[0].message
+        : `${blocked.length} étudiant(s) ne peuvent pas être supprimés car ils sont liés à un PFE. Supprimez d'abord le PFE concerné depuis la page Gestion des PFE.`
+    );
+    return;
+  }
+
   const msg = selectedEtudiants.size === 1
     ? "Supprimer cet étudiant?"
     : `Supprimer ${selectedEtudiants.size} étudiants?`;
 
-  // Demander confirmation avant suppression
   if (!window.confirm("⚠️ " + msg)) return;
 
   try {
-    // Réinitialiser les erreurs précédentes
     setError("");
-
-    // Activer l'état de chargement
     setLoading(true);
 
-    // Générer une requête DELETE pour chaque étudiant sélectionné
-    const deletePromises = Array.from(selectedEtudiants)
-      .map(id => axios.delete(`etudiants/${id}/`));
-
-    // Exécuter toutes les suppressions en parallèle
-    await Promise.all(deletePromises);
-
-    // Afficher un message de succès
-    setSuccessMessage(
-      `✅ ${selectedEtudiants.size} étudiant(s) supprimé(s)`
+    const results = await Promise.allSettled(
+      Array.from(selectedEtudiants).map((id) => axios.delete(`etudiants/${id}/`))
     );
 
-    // Réinitialiser la sélection
-    setSelectedEtudiants(new Set());
+    const failures = results.filter((result) => result.status === 'rejected');
+    const successCount = results.length - failures.length;
 
-    // Recharger les données depuis l'API
-    await loadEtudiants();
-    refreshAcademicData();
+    if (successCount > 0) {
+      setSuccessMessage(`✅ ${successCount} étudiant(s) supprimé(s)`);
+      setSelectedEtudiants(new Set());
+      await loadEtudiants();
+      refreshAcademicData();
+      setTimeout(() => setSuccessMessage(""), 3000);
+    }
 
-    // Masquer le message après 3 secondes
-    setTimeout(() => setSuccessMessage(""), 3000);
+    if (failures.length > 0) {
+      const firstError = failures[0].reason;
+      const message =
+        firstError?.response?.data?.detail ||
+        firstError?.response?.data?.message ||
+        firstError?.message ||
+        "❌ Erreur suppression";
+      setError(message);
+    }
 
   } catch (err) {
-
-    // Récupérer et afficher le message d'erreur
     const message =
       err.response?.data?.detail ||
       err.response?.data?.message ||
@@ -307,8 +374,6 @@ const handleDeleteMultiple = async () => {
     setError(message);
 
   } finally {
-
-    // Désactiver le chargement dans tous les cas
     setLoading(false);
   }
 };
@@ -383,7 +448,7 @@ const handleDeleteMultiple = async () => {
 
       {/* Messages */}
       {successMessage && <div className="success-message">{successMessage}</div>}
-      {error && <div className="success-message" style={{ background: '#e53e3e' }}>{error}</div>}
+      {error && <div className="error-message">{error}</div>}
 
       {/* Zone principale */}
       <div className="page-container">
@@ -440,7 +505,7 @@ const handleDeleteMultiple = async () => {
       {showForm && (
         <div className="modal-overlay">
           <div className="modal-content">
-            {error && <div className="success-message" style={{ background: '#e53e3e', marginBottom: '15px' }}>{error}</div>}
+            {error && <div className="error-message">{error}</div>}
             <EtudiantForm
               selected={selected}
               licences={licences}

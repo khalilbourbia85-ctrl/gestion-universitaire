@@ -23,7 +23,7 @@ export default function Login({ onLogin }) {
 
     try {
       // Envoi des identifiants au backend Django
-      const res = await authAxios.post('api-token-auth/', {
+      const res = await authAxios.post('/api-token-auth/', {
         username,
         password
       });

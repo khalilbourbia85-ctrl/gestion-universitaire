@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./EtudiantForm.css";
+import FormErrorDisplay from './common/FormErrorDisplay';
 
 function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites = [] }) {
 
@@ -14,6 +15,7 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
 
   const todayDate = getTodayDate();
   const [dateErrors, setDateErrors] = useState({});
+  const [formError, setFormError] = useState('');
   const [form, setForm] = useState({
   idEtudiant: "",
   cin: "",
@@ -187,95 +189,59 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
   const handleSubmit = async (e) => {
 
     e.preventDefault();
-  
-  
-    /*
-    VALIDATION
-    */
+    setFormError('');
 
     const cleanedForm = cleanFormData(form);
-  
-  
+
     if (!/^[0-9]{8}$/.test(cleanedForm.cin)) {
-  
-      alert("CIN doit contenir 8 chiffres");
-  
+      setFormError('CIN doit contenir 8 chiffres');
       return;
-  
     }
-  
-  
+
     if (!/^[a-zA-ZÀ-ÿ\s-]+$/.test(cleanedForm.nom_fr)) {
-  
-      alert("Nom invalide");
-  
+      setFormError('Nom invalide');
       return;
-  
     }
-  
-  
+
     if (!/^[a-zA-ZÀ-ÿ\s-]+$/.test(cleanedForm.prenom_fr)) {
-  
-      alert("Prénom invalide");
-  
+      setFormError('Prénom invalide');
       return;
-  
     }
-  
-  
+
     if (!/^[0-9]{8}$/.test(cleanedForm.numTel)) {
-  
-      alert("Téléphone doit contenir 8 chiffres");
-  
+      setFormError('Téléphone doit contenir 8 chiffres');
       return;
-  
     }
-  
-  
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanedForm.email)) {
-  
-      alert("Email invalide");
-  
+      setFormError('Email invalide');
       return;
-  
     }
 
     if (cleanedForm.email && !cleanedForm.email.toLowerCase().endsWith('@gmail.com')) {
-  
-      alert("doit terminer par @gmail.com");
-  
+      setFormError('L\'email doit terminer par @gmail.com');
       return;
-  
     }
 
     if (cleanedForm.nationalite && !/^[a-zA-ZÀ-ÿ\s-]+$/.test(cleanedForm.nationalite)) {
-  
-      alert("Nationalité invalide");
-  
+      setFormError('Nationalité invalide');
       return;
-  
     }
 
     if (cleanedForm.passport && !/^(?=.*[0-9])[A-Za-z0-9-\s]+$/.test(cleanedForm.passport)) {
-  
-      alert("Passeport invalide : doit contenir au moins un chiffre");
-  
+      setFormError('Passeport invalide : doit contenir au moins un chiffre');
       return;
-  
     }
 
-    // Validation date de naissance
     if (cleanedForm.dateNaissance && cleanedForm.dateNaissance > todayDate) {
-      alert("La date de naissance ne peut pas être dans le futur");
-      setDateErrors({ dateNaissance: "La date de naissance ne peut pas être dans le futur" });
+      setFormError('La date de naissance ne peut pas être dans le futur');
+      setDateErrors({ dateNaissance: 'La date de naissance ne peut pas être dans le futur' });
       return;
     }
-  
-  
+
     try {
       await onSubmit(cleanedForm);
     } catch {
-      // Error is handled by parent
       return;
     }
   
@@ -285,6 +251,8 @@ function EtudiantForm({ selected, onSubmit, onCancel, licences = [], specialites
       <h2 className="form-title">
         {selected ? "Modifier Étudiant" : "Nouvel Étudiant"}
       </h2>
+
+      {formError && <FormErrorDisplay message={formError} />}
 
       <div className="form-grid">
         <div className="input-group">
@@ -359,7 +327,7 @@ required
             title="La date de naissance ne peut pas être dans le futur"
           />
           {dateErrors.dateNaissance && (
-            <span style={{ color: 'red', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+            <span className="field-error">
               ⚠️ {dateErrors.dateNaissance}
             </span>
           )}

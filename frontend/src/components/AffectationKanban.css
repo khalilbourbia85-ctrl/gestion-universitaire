@@ -5,18 +5,12 @@
 .kanban-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-
-  padding: 0 20px 20px 0;
-
-  background-color: #f8fafc;
-
-  min-height: calc(100vh - 100px);
-
-  overflow-x: auto;
-  overflow-y: hidden;
-
+  gap: 12px;
+  padding: 0 16px 16px;
   width: 100%;
+  min-width: 0;
+  overflow: visible;
+  background-color: #f8fafc;
 }
 
 /* ============================================================================
@@ -75,15 +69,17 @@
 
 .kanban-board {
   display: flex;
-  justify-content: flex-start;
-  align-items: flex-start;
+  flex-direction: row;
+  align-items: stretch;
   gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  min-width: max-content;
-  width: max-content;
-  padding-bottom: 10px;
+  padding-bottom: 12px;
   scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
 .kanban-board::-webkit-scrollbar {
@@ -111,23 +107,19 @@
 .kanban-column {
   display: flex;
   flex-direction: column;
-
-  width: 320px;
-  min-width: 320px;
-  max-width: 320px;
-
+  width: 300px;
+  min-width: 300px;
+  max-width: 300px;
   flex-shrink: 0;
-
+  height: min(65vh, 560px);
+  min-height: 360px;
+  max-height: 560px;
   background-color: white;
-
   border-radius: 10px;
   border: 1px solid #e2e8f0;
-
   overflow: hidden;
-
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-
-  transition: all 0.3s ease;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 .kanban-column:hover {
@@ -144,12 +136,13 @@
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  width: 320px;
-  min-width: 320px;
-  max-width: 320px;
-  margin-right: 8px;
+  width: 300px;
+  min-width: 300px;
+  max-width: 300px;
   flex-shrink: 0;
-  z-index: 1;
+  position: sticky;
+  left: 0;
+  z-index: 2;
 }
 
 .kanban-column--unassigned:hover {
@@ -278,17 +271,12 @@
 
 .kanban-column-content {
   flex: 1;
-
-  min-height: 200px;
-
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-
   padding: 12px;
-
   display: flex;
   flex-direction: column;
-
   gap: 8px;
 }
 
@@ -479,7 +467,8 @@
     gap: 12px;
   }
 
-  .kanban-column {
+  .kanban-column,
+  .kanban-column--unassigned {
     width: 280px;
     min-width: 280px;
     max-width: 280px;
@@ -569,11 +558,8 @@
   animation: fadeIn 0.2s ease-out;
 }
 
-/* ============================================================================
-   FIREFOX SCROLLBAR
-   ============================================================================ */
-
-* {
+.kanban-board,
+.kanban-column-content {
   scrollbar-width: thin;
   scrollbar-color: #94a3b8 #e2e8f0;
 }

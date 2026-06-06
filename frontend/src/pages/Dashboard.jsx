@@ -3,8 +3,9 @@
   import {
     PieChart, Pie, Cell, Tooltip, Legend,
     BarChart, Bar, XAxis, YAxis, CartesianGrid,
-    ResponsiveContainer, LineChart, Line
+    LineChart, Line
   } from 'recharts';
+  import ChartWrapper from '../components/ChartWrapper';
   import './GestionEtudiants.css'; // On réutilise les styles pour les cartes
   import './Dashboard.css';
 
@@ -111,55 +112,51 @@
             </h3>
             <div className="charts-section">
               {/* Réussite Technique */}
-              <div className="table-card" style={{ padding: '20px', background: 'white', borderRadius: '12px' }}>
+              <div className="table-card" style={{ padding: '20px', background: 'white', borderRadius: '12px', display: 'flex', flexDirection: 'column' }}>
                 <h3 style={{ marginBottom: '15px', color: '#334155' }}>Réussite PFE Technique</h3>
-                <div style={{ width: '100%', height: '300px', display: 'block', overflow: 'hidden' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={reussiteTechniqueData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="value"
-                        label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        <Cell fill="#10b981" />
-                        <Cell fill="#ef4444" />
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+                <ChartWrapper height={300}>
+                  <PieChart>
+                    <Pie
+                      data={reussiteTechniqueData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      <Cell fill="#10b981" />
+                      <Cell fill="#ef4444" />
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ChartWrapper>
               </div>
 
               {/* Réussite Finale */}
-              <div className="table-card" style={{ padding: '20px', background: 'white', borderRadius: '12px' }}>
+              <div className="table-card" style={{ padding: '20px', background: 'white', borderRadius: '12px', display: 'flex', flexDirection: 'column' }}>
                 <h3 style={{ marginBottom: '15px', color: '#334155' }}>Réussite PFE Final</h3>
-                <div style={{ width: '100%', height: '300px', display: 'block', overflow: 'hidden' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={reussiteFinaleData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="value"
-                        label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        <Cell fill="#3b82f6" />
-                        <Cell fill="#f43f5e" />
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+                <ChartWrapper height={300}>
+                  <PieChart>
+                    <Pie
+                      data={reussiteFinaleData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      <Cell fill="#3b82f6" />
+                      <Cell fill="#f43f5e" />
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ChartWrapper>
               </div>
             </div>
           </div>
@@ -171,50 +168,46 @@
             </h3>
             <div className="charts-section">
               {/* Taux de réussite par genre */}
-              <div className="table-card" style={{ padding: '20px', background: 'white', borderRadius: '12px' }}>
+              <div className="table-card" style={{ padding: '20px', background: 'white', borderRadius: '12px', display: 'flex', flexDirection: 'column' }}>
                 <h3 style={{ marginBottom: '15px', color: '#334155' }}>Réussite Globale par Genre (%)</h3>
-                <div style={{ width: '100%', height: '300px', display: 'block', overflow: 'hidden' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={reussiteGenreData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" />
-                      <YAxis domain={[0, 100]} />
-                      <Tooltip cursor={{fill: '#f1f5f9'}} />
-                      <Bar dataKey="taux" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={50} name="Taux de Réussite (%)">
-                        {reussiteGenreData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={index === 0 ? '#3b82f6' : '#ec4899'} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <ChartWrapper height={300}>
+                  <BarChart data={reussiteGenreData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip cursor={{fill: '#f1f5f9'}} />
+                    <Bar dataKey="taux" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={50} name="Taux de Réussite (%)">
+                      {reussiteGenreData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={index === 0 ? '#3b82f6' : '#ec4899'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ChartWrapper>
               </div>
 
               {/* Monôme vs Binôme */}
-              <div className="table-card" style={{ padding: '20px', background: 'white', borderRadius: '12px' }}>
+              <div className="table-card" style={{ padding: '20px', background: 'white', borderRadius: '12px', display: 'flex', flexDirection: 'column' }}>
                 <h3 style={{ marginBottom: '15px', color: '#334155' }}>Projets : Monôme vs Binôme</h3>
-                <div style={{ width: '100%', height: '300px', display: 'block', overflow: 'hidden' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={monomeBinomeData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="value"
-                        label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {monomeBinomeData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => `${value.toFixed(1)}%`} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+                <ChartWrapper height={300}>
+                  <PieChart>
+                    <Pie
+                      data={monomeBinomeData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {monomeBinomeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `${value.toFixed(1)}%`} />
+                    <Legend />
+                  </PieChart>
+                </ChartWrapper>
               </div>
             </div>
           </div>
@@ -226,35 +219,31 @@
             </h3>
             <div className="charts-section">
               {/* Lieux de stage populaires */}
-              <div className="table-card" style={{ padding: '20px', background: 'white', borderRadius: '12px' }}>
+              <div className="table-card" style={{ padding: '20px', background: 'white', borderRadius: '12px', display: 'flex', flexDirection: 'column' }}>
                 <h3 style={{ marginBottom: '15px', color: '#334155' }}>Top 10 : Lieux de Stage Prisés</h3>
-                <div style={{ width: '100%', height: '300px', display: 'block', overflow: 'hidden' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={lieuxStageData} layout="vertical" margin={{ left: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                      <XAxis type="number" />
-                      <YAxis dataKey="name" type="category" width={100} tick={{fontSize: 12}} />
-                      <Tooltip cursor={{fill: '#f1f5f9'}} />
-                      <Bar dataKey="etudiants" fill="#8b5cf6" radius={[0, 4, 4, 0]} name="Nombre d'étudiants" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <ChartWrapper height={300}>
+                  <BarChart data={lieuxStageData} layout="vertical" margin={{ left: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" />
+                    <YAxis dataKey="name" type="category" width={100} tick={{fontSize: 12}} />
+                    <Tooltip cursor={{fill: '#f1f5f9'}} />
+                    <Bar dataKey="etudiants" fill="#8b5cf6" radius={[0, 4, 4, 0]} name="Nombre d'étudiants" />
+                  </BarChart>
+                </ChartWrapper>
               </div>
 
               {/* Réussite par Département */}
-              <div className="table-card" style={{ padding: '20px', background: 'white', borderRadius: '12px' }}>
+              <div className="table-card" style={{ padding: '20px', background: 'white', borderRadius: '12px', display: 'flex', flexDirection: 'column' }}>
                 <h3 style={{ marginBottom: '15px', color: '#334155' }}>Taux de Réussite par Département (%)</h3>
-                <div style={{ width: '100%', height: '300px', display: 'block', overflow: 'hidden' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={depStatsData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" tick={{fontSize: 12}} />
-                      <YAxis domain={[0, 100]} />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="taux" stroke="#10b981" strokeWidth={3} dot={{ r: 6 }} name="Taux de Réussite (%)" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                <ChartWrapper height={300}>
+                  <LineChart data={depStatsData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" tick={{fontSize: 12}} />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="taux" stroke="#10b981" strokeWidth={3} dot={{ r: 6 }} name="Taux de Réussite (%)" />
+                  </LineChart>
+                </ChartWrapper>
               </div>
             </div>
           </div>

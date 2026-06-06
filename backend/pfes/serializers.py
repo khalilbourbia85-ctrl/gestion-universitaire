@@ -221,6 +221,70 @@ class SoutenanceSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def _check_scheduling_conflicts(self, date_s, heure_s, duree, salle, enc, rap):
+        """
+        Vérifie les conflits d'horaires pour :
+        - La salle (pas deux soutenances au même moment dans la même salle)
+        - L'encadrant (pas deux soutenances au même moment)
+        - Le rapporteur (pas deux soutenances au même moment)
+        
+        Retourne un dictionnaire d'erreurs s'il y a des conflits.
+        """
+        from django.db.models import Q
+        
+        errors = {}
+        
+        if not (date_s and heure_s and duree):
+            return errors
+        
+        start_dt = datetime.combine(date_s, heure_s)
+        end_dt = start_dt + timedelta(minutes=duree)
+        
+        # Récupérer toutes les soutenances du même jour
+        soutenances_jour = Soutenance.objects.filter(date_soutenance=date_s)
+        if self.instance is not None:
+            soutenances_jour = soutenances_jour.exclude(pk=self.instance.pk)
+        
+        for s in soutenances_jour:
+            # Ignorer si la soutenance existante n'a pas de durée
+            if s.duree is None:
+                continue
+            
+            s_start = datetime.combine(s.date_soutenance, s.heure_soutenance)
+            s_end = s_start + timedelta(minutes=s.duree)
+            
+            # Vérifier s'il y a chevauchement de temps
+            if start_dt < s_end and end_dt > s_start:
+                # Vérifier conflit salle
+                if salle and s.salle and s.salle.strip().lower() == salle.strip().lower():
+                    errors['salle'] = (
+                        f"La salle {salle} est déjà réservée de {s_start.strftime('%H:%M')} à {s_end.strftime('%H:%M')}. "
+                        f"Veuillez choisir une autre salle ou un autre créneau horaire."
+                    )
+                    errors['heure_soutenance'] = "Chevauchement détecté avec une autre soutenance dans la même salle."
+                
+                # Vérifier conflit encadrant
+                if enc and (s.encadrant_id == enc.pk or s.rapporteur_id == enc.pk):
+                    errors['encadrant'] = (
+                        f"L'encadrant {enc.nom} {enc.prenom} est déjà engagé dans une soutenance "
+                        f"de {s_start.strftime('%H:%M')} à {s_end.strftime('%H:%M')} (salle {s.salle}). "
+                        f"Un encadrant ne peut pas assurer deux soutenances au même moment."
+                    )
+                    if 'heure_soutenance' not in errors:
+                        errors['heure_soutenance'] = "Conflit détecté : l'encadrant est déjà assigné à une autre soutenance."
+                
+                # Vérifier conflit rapporteur
+                if rap and (s.encadrant_id == rap.pk or s.rapporteur_id == rap.pk):
+                    errors['rapporteur'] = (
+                        f"Le rapporteur {rap.nom} {rap.prenom} est déjà engagé dans une soutenance "
+                        f"de {s_start.strftime('%H:%M')} à {s_end.strftime('%H:%M')} (salle {s.salle}). "
+                        f"Un rapporteur ne peut pas assurer deux soutenances au même moment."
+                    )
+                    if 'heure_soutenance' not in errors:
+                        errors['heure_soutenance'] = "Conflit détecté : le rapporteur est déjà assigné à une autre soutenance."
+        
+        return errors
+
     def validate(self, attrs):
         # Récupération de tous les champs
         salle = attrs.get('salle')
@@ -270,52 +334,23 @@ class SoutenanceSerializer(serializers.ModelSerializer):
                                 'date_soutenance': f"La soutenance finale ({date_s}) doit avoir lieu après la soutenance technique de l'étudiant {etudiant} ({technique.date_soutenance})."
                             })
 
-        # 2. Chevauchement Salles et Enseignants (Seulement si duree est definie)
+        # 2. Durée obligatoire pour soutenances finales
         if type_s == 'finale' and duree is None:
             raise serializers.ValidationError({
                 'duree': "La durée est obligatoire pour une soutenance finale."
             })
 
-        if date_s and heure_s and duree is not None:
-            from django.db.models import Q
-            start_dt = datetime.combine(date_s, heure_s)
-            end_dt = start_dt + timedelta(minutes=duree)
+        # 3. Durée obligatoire pour les vérifications de conflit d'horaires
+        # Utiliser 60 minutes par défaut si la durée n'est pas spécifiée
+        duree_effective = duree if duree is not None else 60
 
-            q_conditions = Q()
-            if salle:
-                q_conditions |= Q(salle=salle)
-            if enc:
-                q_conditions |= Q(encadrant=enc) | Q(rapporteur=enc)
-            if rap:
-                q_conditions |= Q(encadrant=rap) | Q(rapporteur=rap)
-
-            if q_conditions:
-                soutenances_jour = Soutenance.objects.filter(Q(date_soutenance=date_s) & q_conditions)
-                if self.instance is not None:
-                    soutenances_jour = soutenances_jour.exclude(pk=self.instance.pk)
-                
-                for s in soutenances_jour:
-                    if s.duree is None:
-                        continue
-                    s_start = datetime.combine(s.date_soutenance, s.heure_soutenance)
-                    s_end = s_start + timedelta(minutes=s.duree)
-                    
-                    if start_dt < s_end and end_dt > s_start:
-                        if salle and s.salle == salle:
-                            raise serializers.ValidationError({
-                                'salle': f"La salle {salle} est déjà réservée de {s_start.strftime('%H:%M')} à {s_end.strftime('%H:%M')}.",
-                                'heure_soutenance': "Chevauchement détecté avec une autre soutenance en cours."
-                            })
-                        if enc and (s.encadrant == enc or s.rapporteur == enc):
-                            raise serializers.ValidationError({
-                                'encadrant': f"L'encadrant {enc.nom} {enc.prenom} est déjà en soutenance de {s_start.strftime('%H:%M')} à {s_end.strftime('%H:%M')} (salle {s.salle}).",
-                                'heure_soutenance': "Un encadrant ne peut pas assurer deux soutenances en même temps."
-                            })
-                        if rap and (s.encadrant == rap or s.rapporteur == rap):
-                            raise serializers.ValidationError({
-                                'rapporteur': f"Le rapporteur {rap.nom} {rap.prenom} est déjà en soutenance de {s_start.strftime('%H:%M')} à {s_end.strftime('%H:%M')} (salle {s.salle}).",
-                                'heure_soutenance': "Un rapporteur ne peut pas assurer deux soutenances en même temps."
-                            })
+        # 4. Vérifier les conflits de salle, encadrant et rapporteur
+        if date_s and heure_s:
+            conflict_errors = self._check_scheduling_conflicts(
+                date_s, heure_s, duree_effective, salle, enc, rap
+            )
+            if conflict_errors:
+                raise serializers.ValidationError(conflict_errors)
 
         old_rap = self.instance.rapporteur if self.instance else None
         if enc and rap and enc.pk == rap.pk:

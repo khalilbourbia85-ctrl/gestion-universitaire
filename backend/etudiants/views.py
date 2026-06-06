@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.db import transaction, IntegrityError
 from .models import Etudiant
@@ -44,8 +45,48 @@ class EtudiantViewSet(viewsets.ModelViewSet):
         
         return Etudiant.objects.none()
 
+    def _deletion_block_message(self, etudiant):
+        try:
+            pfe = etudiant.pfe_assignment.pfe
+        except ObjectDoesNotExist:
+            pfe = None
+
+        if pfe is not None:
+            partners = [
+                p.etudiant
+                for p in pfe.participants.exclude(etudiant=etudiant).select_related('etudiant')
+            ]
+            if partners:
+                partner_names = ', '.join(
+                    f'{e.nom_fr} {e.prenom_fr}'.strip() for e in partners
+                )
+                return (
+                    f"Impossible de supprimer cet étudiant : il est affecté au PFE n°{pfe.idPfe} "
+                    f"({pfe.sujet}) en binôme avec {partner_names}. "
+                    f"Supprimez d'abord ce PFE depuis la page Gestion des PFE, puis supprimez l'étudiant."
+                )
+            return (
+                f"Impossible de supprimer cet étudiant : il est affecté au PFE n°{pfe.idPfe} "
+                f"({pfe.sujet}). Supprimez d'abord ce PFE depuis la page Gestion des PFE, "
+                f"puis supprimez l'étudiant."
+            )
+
+        if etudiant.soutenances.exists():
+            return (
+                "Impossible de supprimer cet étudiant car il est lié à une soutenance. "
+                "Supprimez d'abord la soutenance correspondante."
+            )
+
+        return None
+
     def destroy(self, request, *args, **kwargs):
         from django.db.models import ProtectedError
+
+        instance = self.get_object()
+        block_message = self._deletion_block_message(instance)
+        if block_message:
+            return Response({'detail': block_message}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             return super().destroy(request, *args, **kwargs)
         except ProtectedError:

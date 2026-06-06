@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './Table.css';
+import DetailsModal from './DetailsModal';
 
 function formatHeureApi(h) {
   if (h == null || h === '') return '—';
@@ -8,10 +9,15 @@ function formatHeureApi(h) {
 }
 
 function SoutenancesTable({ soutenances, onEdit, onDelete, filterBy = ['Tous les champs'] }) {
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedSoutenance, setSelectedSoutenance] = useState(null);
+  
   const safeSoutenances = Array.isArray(soutenances) ? soutenances : [];
   const showField = (field) => Array.isArray(filterBy) ? (filterBy.includes('Tous les champs') || filterBy.includes(field)) : (filterBy === 'Tous les champs' || filterBy === field);
 
   return (
+    <>
+    <div className="table-wrapper">
     <table className="table">
       <thead>
         <tr>
@@ -65,6 +71,16 @@ function SoutenancesTable({ soutenances, onEdit, onDelete, filterBy = ['Tous les
               {filterBy.includes('Tous les champs') && <td>{soutenance.resultat_technique || '—'}</td>}
               {filterBy.includes('Tous les champs') && <td>{soutenance.resultat_finale || '—'}</td>}
               <td>
+                <span
+                  className="view-icon"
+                  onClick={() => {
+                    setSelectedSoutenance(soutenance);
+                    setShowDetailsModal(true);
+                  }}
+                  title="Voir les détails"
+                >
+                  👁️
+                </span>
                 <span className="icon edit-icon" onClick={() => onEdit(soutenance)}>
                   ✏️
                 </span>
@@ -77,6 +93,33 @@ function SoutenancesTable({ soutenances, onEdit, onDelete, filterBy = ['Tous les
         )}
       </tbody>
     </table>
+    </div>
+    <DetailsModal
+      isOpen={showDetailsModal}
+      onClose={() => {
+        setShowDetailsModal(false);
+        setSelectedSoutenance(null);
+      }}
+      title={selectedSoutenance ? `Détails Soutenance #${selectedSoutenance.idSoutenance}` : 'Détails'}
+      details={selectedSoutenance ? {
+        'ID': selectedSoutenance.idSoutenance,
+        'Type': selectedSoutenance.type_soutenance === 'technique' ? 'Technique' : 'Finale',
+        'Date': new Date(selectedSoutenance.date_soutenance).toLocaleDateString('fr-FR'),
+        'Heure': formatHeureApi(selectedSoutenance.heure_soutenance),
+        'Durée (min)': selectedSoutenance.duree || '—',
+        'Salle': selectedSoutenance.salle,
+        'Encadrant': selectedSoutenance.encadrant_detail ? `${selectedSoutenance.encadrant_detail.nom} ${selectedSoutenance.encadrant_detail.prenom}` : selectedSoutenance.encadrant,
+        'Type contrat (enc.)': selectedSoutenance.encadrant_detail?.typeContrat || '—',
+        'Rapporteur': selectedSoutenance.rapporteur_detail ? `${selectedSoutenance.rapporteur_detail.nom} ${selectedSoutenance.rapporteur_detail.prenom}` : selectedSoutenance.rapporteur,
+        'Type contrat (rap.)': selectedSoutenance.rapporteur_detail?.typeContrat || '—',
+        'Étudiants': selectedSoutenance.etudiants_detail && selectedSoutenance.etudiants_detail.length > 0 ? selectedSoutenance.etudiants_detail.map((e) => `${e.nom_fr} ${e.prenom_fr}`).join(', ') : selectedSoutenance.etudiants?.join(', ') || 'Aucun',
+        'Résultat Technique': selectedSoutenance.resultat_technique || '—',
+        'Résultat Finale': selectedSoutenance.resultat_finale || '—',
+        'Dépôt Électronique': selectedSoutenance.depot_electronique,
+        'Dépôt Papier': selectedSoutenance.depot_papier,
+      } : {}}
+    />
+    </>
   );
 }
 

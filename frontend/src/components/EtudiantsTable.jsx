@@ -1,9 +1,16 @@
-import React from "react";
+import React, { useState } from "react";
 import "./Table.css";
+import DetailsModal from './DetailsModal';
+
 function EtudiantsTable({ etudiants, onEdit, onDelete, filterBy = ['Tous les champs'], selectedEtudiants = new Set(), onToggleSelect }) {
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedEtudiant, setSelectedEtudiant] = useState(null);
+  
   const showField = (field) => Array.isArray(filterBy) ? (filterBy.includes('Tous les champs') || filterBy.includes(field)) : (filterBy === 'Tous les champs' || filterBy === field);
 
   return (
+<>
+<div className="table-wrapper">
 <table className="table"> 
 <thead>
 <tr>
@@ -80,26 +87,61 @@ function EtudiantsTable({ etudiants, onEdit, onDelete, filterBy = ['Tous les cha
             )}
 
             <td>
-
-  <span
-    className="icon edit-icon"
-    onClick={() => onEdit(e)}
-  >
-    ✏️
-  </span>
-
-  <span
-    className="icon delete-icon"
-    onClick={() => onDelete(e.idEtudiant)}
-  >
-    🗑️
-  </span>
-
-</td>
+              <span
+                className="view-icon"
+                onClick={() => {
+                  setSelectedEtudiant(e);
+                  setShowDetailsModal(true);
+                }}
+                title="Voir les détails"
+              >
+                👁️
+              </span>
+              <span
+                className="icon edit-icon"
+                onClick={() => onEdit(e)}
+              >
+                ✏️
+              </span>
+              <span
+                className="icon delete-icon"
+                onClick={() => onDelete(e.idEtudiant)}
+              >
+                🗑️
+              </span>
+            </td>
           </tr>
         ))}
       </tbody>
     </table>
+    </div>
+    <DetailsModal
+      isOpen={showDetailsModal}
+      onClose={() => {
+        setShowDetailsModal(false);
+        setSelectedEtudiant(null);
+      }}
+      title={selectedEtudiant ? `Détails - ${selectedEtudiant.nom_fr || selectedEtudiant.nom} ${selectedEtudiant.prenom_fr || selectedEtudiant.prenom}` : 'Détails'}
+      details={selectedEtudiant ? {
+        'ID': selectedEtudiant.idEtudiant,
+        'CIN': selectedEtudiant.cin,
+        'Passport': selectedEtudiant.passport,
+        'Nationalité': selectedEtudiant.nationalite,
+        'Nom': selectedEtudiant.nom_fr || selectedEtudiant.nom,
+        'Prénom': selectedEtudiant.prenom_fr || selectedEtudiant.prenom,
+        'Genre': selectedEtudiant.genre === 'F' ? 'Femme' : 'Homme',
+        'Email': selectedEtudiant.email,
+        'Téléphone': selectedEtudiant.numTel,
+        'Date Naissance': selectedEtudiant.dateNaissance,
+        'Adresse': selectedEtudiant.adresse,
+        'Licence': selectedEtudiant.licence_detail ? `${selectedEtudiant.licence_detail.nom} (${selectedEtudiant.licence_detail.code})` : '—',
+        'Spécialité': selectedEtudiant.specialite_detail ? `${selectedEtudiant.specialite_detail.nom} (${selectedEtudiant.specialite_detail.code})` : '—',
+        'Groupe': selectedEtudiant.groupe,
+        'Situation S5': selectedEtudiant.situation_s5 === 'N' ? 'Nouveau' : selectedEtudiant.situation_s5 === 'R' ? 'Redoublant' : '-',
+        'Situation PFE': selectedEtudiant.situation_pfe === 'N' ? 'Nouveau' : selectedEtudiant.situation_pfe === 'R' ? 'Redoublant' : '-',
+      } : {}}
+    />
+</>
   );
 }
 

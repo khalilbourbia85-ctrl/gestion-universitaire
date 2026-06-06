@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import FormErrorDisplay from './common/FormErrorDisplay';
 
 function getEmptyEncadrantForm() {
   return {
@@ -28,6 +29,7 @@ function getEmptyEncadrantForm() {
 
 function EncadrantsForm({ selected, onSubmit, onCancel }) {
   const [form, setForm] = useState(() => getEmptyEncadrantForm());
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     if (selected) {
@@ -66,30 +68,39 @@ function EncadrantsForm({ selected, onSubmit, onCancel }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setFormError('');
     if (!String(form.matricule).trim()) {
-      return alert('Matricule obligatoire.');
+      setFormError('Matricule obligatoire.');
+      return;
     }
     if (!String(form.cin).trim()) {
-      return alert('CIN obligatoire.');
+      setFormError('CIN obligatoire.');
+      return;
     }
     if (!String(form.nom).trim() || !String(form.prenom).trim()) {
-      return alert('Nom et prénom sont obligatoires.');
+      setFormError('Nom et prénom sont obligatoires.');
+      return;
     }
     if (!String(form.email).trim()) {
-      return alert('Email obligatoire.');
+      setFormError('Email obligatoire.');
+      return;
     }
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(String(form.email).trim())) {
-      return alert("L'email n'est pas valide.");
+      setFormError("L'email n'est pas valide.");
+      return;
     }
     if (!String(form.numtel).trim()) {
-      return alert('Téléphone obligatoire.');
+      setFormError('Téléphone obligatoire.');
+      return;
     }
     if (!String(form.grade).trim()) {
-      return alert('Grade obligatoire.');
+      setFormError('Grade obligatoire.');
+      return;
     }
     if (!String(form.dateRecrutement).trim()) {
-      return alert('Date de recrutement obligatoire.');
+      setFormError('Date de recrutement obligatoire.');
+      return;
     }
     const payload = { ...form };
     onSubmit(payload);
@@ -98,6 +109,7 @@ function EncadrantsForm({ selected, onSubmit, onCancel }) {
   return (
     <>
         <h3>{selected ? 'Modifier un encadrant' : 'Ajouter un encadrant'}</h3>
+        {formError && <FormErrorDisplay message={formError} />}
         <form onSubmit={handleSubmit}>
           <div className="form-row">
             <label>Matricule</label>

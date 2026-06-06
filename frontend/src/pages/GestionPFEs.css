@@ -1,0 +1,363 @@
+/* ===============================
+   GESTION PFE — espacement compact
+=============================== */
+
+.pfes-page-container {
+  padding: 8px 12px 12px;
+  min-height: unset;
+  height: auto;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.pfes-page-container .page-title {
+  margin-top: 0;
+  margin-bottom: 10px;
+  padding: 0;
+}
+
+.pfes-page-container .page-container {
+  margin-top: 0;
+  margin-bottom: 10px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.pfes-page-container .stats-card {
+  margin-top: 0;
+  margin-bottom: 8px;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.pfes-page-container .stats-card h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  padding: 0;
+}
+
+.pfes-page-container .pfes-tabs-nav {
+  margin-top: 0;
+  margin-bottom: 10px;
+  padding-top: 0;
+  padding-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.pfes-page-container .table-card {
+  min-height: unset;
+  height: auto;
+  max-height: none;
+  overflow: hidden;
+  gap: 0;
+  margin-top: 0;
+  margin-bottom: 12px;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.pfes-page-container .table-card .table-wrapper {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  min-height: unset;
+  height: auto;
+  overflow-x: auto;
+  overflow-y: visible;
+  width: 100%;
+  max-width: 100%;
+}
+
+.pfes-page-container .table-card > .card-header {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 10px 16px 0;
+  min-height: unset;
+  height: auto;
+  gap: 0;
+}
+
+.pfes-page-container .table-card > .card-header h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  padding: 0;
+  line-height: 1.25;
+}
+
+.pfes-page-container .table-card .table {
+  margin-top: 0;
+  margin-bottom: 0;
+  width: max-content;
+  min-width: 100%;
+}
+
+.pfes-page-container .table-card .table th:last-child,
+.pfes-page-container .table-card .table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  min-width: 150px;
+  background: #fff;
+  box-shadow: -6px 0 12px rgba(15, 23, 42, 0.08);
+}
+
+.pfes-page-container .table-card .table thead th:last-child {
+  z-index: 12;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.pfes-page-container .table-card .table tbody tr:hover td:last-child {
+  background: #f7fafc;
+}
+
+.pfes-page-container .table-card .table td:last-child .icon,
+.pfes-page-container .table-card .table td:last-child .view-icon,
+.pfes-page-container .table-card .table td:last-child .action-button {
+  visibility: visible;
+  opacity: 1;
+}
+
+.pfes-page-container .success-message {
+  margin-bottom: 10px;
+}
+
+.pfes-page-container .table-card--kanban {
+  overflow: visible;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.pfes-page-container .table-card--kanban .kanban-container {
+  flex: 1;
+  min-width: 0;
+}
+
+.pfes-students-tab {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.pfes-students-tab-hint {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  font-size: 13px;
+}
+
+.pfes-students-lists {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.pfes-page-container .table-card.pfes-students-list-card {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  max-height: none !important;
+  margin-bottom: 0;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+  overflow: visible !important;
+}
+
+.pfes-students-card-header {
+  flex-shrink: 0;
+  align-items: flex-end;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.pfes-students-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pfes-students-card-title h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.pfes-students-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.pfes-students-search {
+  min-width: 220px;
+  max-width: 100%;
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.pfes-students-search:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.pfes-students-list-body {
+  position: relative;
+  flex: none;
+  height: clamp(320px, calc(100vh - 520px), 640px);
+  max-height: clamp(320px, calc(100vh - 520px), 640px);
+  padding: 0;
+  border-top: 1px solid #f1f5f9;
+  background: #fff;
+  overflow: hidden;
+}
+
+.pfes-students-scroll {
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: scroll;
+  -ms-overflow-style: scrollbar;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: #475569 #e2e8f0;
+  -webkit-overflow-scrolling: touch;
+  border-right: 1px solid #cbd5e1;
+  box-shadow: inset -14px 0 0 #e2e8f0;
+}
+
+.pfes-students-scroll::-webkit-scrollbar {
+  width: 14px;
+}
+
+.pfes-students-scroll::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+
+.pfes-students-scroll::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 999px;
+  border: 3px solid #e2e8f0;
+  min-height: 48px;
+}
+
+.pfes-students-scroll::-webkit-scrollbar-thumb:hover {
+  background: #1e293b;
+}
+
+.pfes-students-list-card .pfes-students-table {
+  width: 100%;
+  min-width: 100%;
+  overflow: visible;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+}
+
+.pfes-students-list-card .pfes-students-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.pfes-students-scroll .pfes-students-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+}
+
+.pfes-students-list-card .pfes-students-table th,
+.pfes-students-list-card .pfes-students-table td {
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.pfes-students-list-card .pfes-students-table td {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pfes-students-list-card .pfes-students-table tbody tr:nth-child(even) td {
+  background: #f8fafc;
+}
+
+.pfes-students-list-card .pfes-students-table tbody tr:hover td {
+  background: #eef2ff;
+}
+
+.pfes-students-list-card .pfes-students-table th:last-child,
+.pfes-students-list-card .pfes-students-table td:last-child {
+  position: static;
+  right: auto;
+  z-index: auto;
+  min-width: unset;
+  box-shadow: none;
+}
+
+.pfes-students-empty {
+  margin: 0;
+  padding: 24px 16px;
+  color: #64748b;
+  font-size: 14px;
+  text-align: center;
+}
+
+@media (max-width: 1024px) {
+  .pfes-students-lists {
+    grid-template-columns: 1fr;
+  }
+
+  .pfes-students-list-card--avec .pfes-students-list-body {
+    height: clamp(220px, 30vh, 300px);
+    max-height: clamp(220px, 30vh, 300px);
+  }
+
+  .pfes-students-list-card--sans .pfes-students-list-body {
+    height: clamp(360px, calc(100vh - 540px), 640px);
+    max-height: clamp(360px, calc(100vh - 540px), 640px);
+  }
+}
+
+@media (max-width: 768px) {
+  .pfes-students-card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pfes-students-search {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .pfes-students-list-card--sans .pfes-students-list-body {
+    height: clamp(320px, calc(100vh - 520px), 560px);
+    max-height: clamp(320px, calc(100vh - 520px), 560px);
+  }
+}
+
+@media (max-width: 768px) {
+  .pfes-page-container .table-card {
+    padding: 0;
+  }
+
+  .pfes-page-container .table-card > .card-header {
+    padding: 8px 12px 0;
+  }
+
+  .pfes-page-container .table-card > .card-header h3 {
+    margin-bottom: 10px;
+  }
+}

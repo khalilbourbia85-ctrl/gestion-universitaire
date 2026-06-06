@@ -1,5 +1,6 @@
 import React,{useState,useEffect} from "react";
 import "./EtudiantForm.css";
+import FormErrorDisplay from './common/FormErrorDisplay';
 
 function EnseignantForm({ selected, onSubmit, onCancel, onFormChange }) {
   // Fonction pour obtenir la date d'aujourd'hui au format YYYY-MM-DD
@@ -214,7 +215,7 @@ const validateForm = () => {
     {selected ? "Modifier Enseignant" : "Nouvel Enseignant"}
   </h2>
 
-  {formError && <div className="success-message" style={{ background: '#e53e3e', marginBottom: '15px' }}>{formError}</div>}
+  {formError && <FormErrorDisplay message={formError} />}
 
   <div className="form-grid">
     <div className="input-group">
@@ -256,7 +257,7 @@ const validateForm = () => {
         title="La date de recrutement ne peut pas être dans le futur"
       />
       {dateErrors.dateRecrutement && (
-        <span style={{ color: 'red', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+        <span className="field-error">
           ⚠️ {dateErrors.dateRecrutement}
         </span>
       )}
@@ -294,7 +295,7 @@ const validateForm = () => {
             title="La date de titularisation ne peut pas être dans le futur"
           />
           {dateErrors.dateTitularisation && (
-            <span style={{ color: 'red', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+            <span className="field-error">
               ⚠️ {dateErrors.dateTitularisation}
             </span>
           )}
@@ -399,7 +400,7 @@ const validateForm = () => {
         title="La date d'obtention du diplôme ne peut pas être dans le futur"
       />
       {dateErrors['diplome.dateObtention'] && (
-        <span style={{ color: 'red', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+        <span className="field-error">
           ⚠️ {dateErrors['diplome.dateObtention']}
         </span>
       )}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import FormErrorDisplay from './common/FormErrorDisplay';
 
 const emptyRapporteurForm = {
   matricule: '',
@@ -14,6 +15,7 @@ const emptyRapporteurForm = {
 
 function RapporteursForm({ selected, onSubmit, onCancel }) {
   const [form, setForm] = useState(emptyRapporteurForm);
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     if (selected) {
@@ -40,17 +42,22 @@ function RapporteursForm({ selected, onSubmit, onCancel }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setFormError('');
     if (!form.matricule || !form.nom || !form.prenom) {
-      return alert('Matricule, nom et prénom sont obligatoires.');
+      setFormError('Matricule, nom et prénom sont obligatoires.');
+      return;
     }
     if (form.cin && !/^\d{8}$/.test(form.cin.trim())) {
-      return alert('Le CIN doit contenir exactement 8 chiffres.');
+      setFormError('Le CIN doit contenir exactement 8 chiffres.');
+      return;
     }
     if (form.email && !form.email.trim().toLowerCase().endsWith('@gmail.com')) {
-      return alert("L'email doit se terminer par @gmail.com.");
+      setFormError("L'email doit se terminer par @gmail.com.");
+      return;
     }
     if (form.numtel && !/^\d{8}$/.test(form.numtel.trim())) {
-      return alert('Le numéro de téléphone doit contenir exactement 8 chiffres.');
+      setFormError('Le numéro de téléphone doit contenir exactement 8 chiffres.');
+      return;
     }
     onSubmit(form);
   };
@@ -59,6 +66,7 @@ function RapporteursForm({ selected, onSubmit, onCancel }) {
     <div className="modal-overlay">
       <div className="modal-content">
         <h3>{selected ? 'Modifier un rapporteur' : 'Ajouter un rapporteur'}</h3>
+        {formError && <FormErrorDisplay message={formError} />}
         <form onSubmit={handleSubmit}>
           <div className="form-row">
             <label>Matricule</label>

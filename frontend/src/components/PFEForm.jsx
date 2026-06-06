@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import FormErrorDisplay from './common/FormErrorDisplay';
 
 // Extrait les IDs étudiants depuis un PFE (gère plusieurs formats d'API).
 function collectEtudiantIdsFromPfe(p) {
@@ -92,7 +93,7 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
       setEncadrant('');
       setSelectedEtudiants([]);
     }
-  }, [pfe, specialites, etudiants]);
+  }, [pfe]);
 
   // Identifier les étudiants déjà assignés à d'autres PFEs.
   const currentPfeId = pfe?.idPfe ?? null;
@@ -187,7 +188,7 @@ function PFEForm({ pfe, pfes = [], enseignants, etudiants, specialites = [], lic
     <div className="modal-overlay">
       <div className="modal-content">
         <h3>{pfe ? 'Modifier le PFE' : 'Ajouter un nouveau PFE'}</h3>
-        {errorMessage && <div className="success-message" style={{ background: '#e53e3e' }}>{errorMessage}</div>}
+        {errorMessage && <FormErrorDisplay message={errorMessage} />}
         <form onSubmit={handleSave}>
           {/* Sélection des étudiants */}
           <div className="form-row">

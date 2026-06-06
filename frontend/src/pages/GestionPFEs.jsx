@@ -1,11 +1,12 @@
   // === IMPORTS ===
-  import React, { useEffect, useState, useRef, useCallback } from 'react';
+  import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
   import axios from '../utils/axiosConfig'; // Configuration axios pour les requêtes API
   import PFEsTable from '../components/PFEsTable'; // Tableau d'affichage des PFE
   import PFEForm from '../components/PFEForm'; // Formulaire de création/édition de PFE
   import AffectationKanban from '../components/AffectationKanban'; // Vue Kanban pour l'affectation
   import useAcademicData from '../hooks/useAcademicData'; // Hook pour licences/spécialités avec auto-refresh
   import './GestionEtudiants.css'; // Styles CSS partagés
+  import './GestionPFEs.css';
 
 
   // Capture les erreurs React et affiche une interface d'erreur au lieu de bloquer l'app
@@ -30,7 +31,7 @@
         return (
           <div className="main-container">
             <h2 className="page-title">Erreur dans Gestion des PFE</h2>
-            <div className="success-message" style={{ background: '#e53e3e' }}>
+            <div className="error-message">
               Une erreur s'est produite: {this.state.error?.message}
             </div>
             <button onClick={() => window.location.reload()}>Recharger la page</button>
@@ -78,6 +79,8 @@
     const [searchTerm, setSearchTerm] = useState('');
     // Indique le champ sur lequel chercher (ex: 'Sujet', 'Encadrant', 'Tous les champs', etc.)
     const [filterBy, setFilterBy] = useState('Tous les champs');
+    const [searchEtudiantsAvec, setSearchEtudiantsAvec] = useState('');
+    const [searchEtudiantsSans, setSearchEtudiantsSans] = useState('');
     
     // ======== ÉTATS MESSAGES ========
     // Message de succès affiché en haut de la page (ex: "PFE créé avec succès")
@@ -335,6 +338,84 @@
           );
       }
     });
+
+
+    const sortEtudiantsByName = (a, b) =>
+      String(a?.nom_fr || a?.nom || '').localeCompare(String(b?.nom_fr || b?.nom || ''), 'fr', { sensitivity: 'base' }) ||
+      String(a?.prenom_fr || a?.prenom || '').localeCompare(String(b?.prenom_fr || b?.prenom || ''), 'fr', { sensitivity: 'base' });
+
+    const { etudiantsAvecPfe, etudiantsSansPfe } = useMemo(() => {
+      const pfeByStudentId = new Map();
+
+      (pfes || []).forEach((pfe) => {
+        const registerStudent = (student) => {
+          if (!student) return;
+          const studentId = Number(student.idEtudiant ?? student.id);
+          if (!Number.isFinite(studentId)) return;
+          pfeByStudentId.set(studentId, {
+            ...student,
+            idEtudiant: studentId,
+            pfeId: pfe.idPfe,
+            pfeSujet: pfe.sujet,
+            encadrantLabel: pfe.encadrant_detail
+              ? `${pfe.encadrant_detail.nom} ${pfe.encadrant_detail.prenom}`
+              : '—',
+          });
+        };
+
+        (pfe.etudiants_detail || []).forEach(registerStudent);
+
+        (pfe.etudiants || []).forEach((entry) => {
+          if (entry && typeof entry === 'object') {
+            registerStudent(entry);
+            return;
+          }
+          const studentId = Number(entry);
+          if (!Number.isFinite(studentId) || pfeByStudentId.has(studentId)) return;
+          const found = (etudiants || []).find((e) => Number(e.idEtudiant) === studentId);
+          if (found) registerStudent(found);
+        });
+      });
+
+      const avecPfe = Array.from(pfeByStudentId.values()).sort(sortEtudiantsByName);
+      const avecPfeIds = new Set(avecPfe.map((e) => Number(e.idEtudiant)));
+      const sansPfe = (etudiants || [])
+        .filter((e) => !avecPfeIds.has(Number(e.idEtudiant)))
+        .sort(sortEtudiantsByName);
+
+      return { etudiantsAvecPfe: avecPfe, etudiantsSansPfe: sansPfe };
+    }, [pfes, etudiants]);
+
+    const filterEtudiantRows = useCallback((rows, term) => {
+      const q = String(term || '').trim().toLowerCase();
+      if (!q) return rows;
+      return rows.filter((e) =>
+        [
+          e.idEtudiant,
+          e.nom_fr,
+          e.nom,
+          e.prenom_fr,
+          e.prenom,
+          e.cin,
+          e.pfeId,
+          e.pfeSujet,
+          e.encadrantLabel,
+          e.groupe,
+          e.specialite_detail?.nom,
+          e.specialite,
+        ].some((value) => String(value ?? '').toLowerCase().includes(q))
+      );
+    }, []);
+
+    const filteredEtudiantsAvecPfe = useMemo(
+      () => filterEtudiantRows(etudiantsAvecPfe, searchEtudiantsAvec),
+      [etudiantsAvecPfe, searchEtudiantsAvec, filterEtudiantRows]
+    );
+
+    const filteredEtudiantsSansPfe = useMemo(
+      () => filterEtudiantRows(etudiantsSansPfe, searchEtudiantsSans),
+      [etudiantsSansPfe, searchEtudiantsSans, filterEtudiantRows]
+    );
 
 
     // === HANDLERS: Gestion du formulaire ===
@@ -970,13 +1051,13 @@
 
   // Rendu principal JSX
   return (
-    <div className="main-container">
+    <div className="main-container pfes-page-container">
       {/* Titre de la page */}
       <h2 className="page-title">Gestion des PFE</h2>
       
       {/* Messages de succès et d'erreur */}
       {message && <div className="success-message">{message}</div>}
-      {error && <div className="success-message" style={{ background: '#e53e3e' }}>{JSON.stringify(error)}</div>}
+      {error && <div className="error-message">{typeof error === 'string' ? error : JSON.stringify(error)}</div>}
 
       {/* Conteneur principal */}
       <div className="page-container">
@@ -1164,12 +1245,12 @@
           </div>
 
           {/* Tabs Navigation */}
-          <div style={{ 
-            display: 'flex', 
-            gap: '10px', 
-            marginBottom: '20px', 
-            borderBottom: '2px solid #e2e8f0', 
-            paddingBottom: '10px' 
+          <div
+            className="pfes-tabs-nav"
+            style={{
+            display: 'flex',
+            gap: '10px',
+            borderBottom: '2px solid #e2e8f0',
           }}>
             <button
               className="btn"
@@ -1210,6 +1291,19 @@
             >
               ⚙️ Capacité et enseignant
             </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => setActiveTab('etudiants')}
+              style={{
+                backgroundColor: activeTab === 'etudiants' ? '#3b82f6' : '#f8fafc',
+                color: activeTab === 'etudiants' ? 'white' : '#475569',
+                border: '1px solid #cbd5e1',
+                padding: '10px 16px'
+              }}
+            >
+              👥 Étudiants PFE
+            </button>
           </div>
 
           {/* Statistiques des assignations */}
@@ -1232,7 +1326,7 @@
             </div>
           </div>
 
-          {/* Système d'onglets avec 3 vues: Liste, Kanban, Capacités */}
+          {/* Système d'onglets avec 4 vues: Liste, Kanban, Capacités, Étudiants */}
           {activeTab === 'liste' && (
             // === ONGLET 1: VUE LISTE ===
             // Affiche la liste des PFEs filtrés dans un tableau avec options d'édition/suppression
@@ -1255,7 +1349,7 @@
           {activeTab === 'kanban' && (
             // === ONGLET 2: VUE KANBAN ===
             // Affiche les PFEs organisés par encadrant dans des colonnes (style tableau Kanban)
-            <div className="table-card">
+            <div className="table-card table-card--kanban">
               <div className="card-header">
                 <h3>🎯 Vue Kanban - Affectation des PFEs par Encadrant</h3>
               </div>
@@ -1353,6 +1447,131 @@
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'etudiants' && (
+            <div className="pfes-students-tab">
+              <p className="pfes-students-tab-hint">
+                Faites défiler chaque liste avec la barre de défilement à droite pour voir tous les étudiants.
+              </p>
+              <div className="pfes-students-lists">
+                <div className="table-card pfes-students-list-card pfes-students-list-card--avec">
+                  <div className="card-header pfes-students-card-header">
+                    <div className="pfes-students-card-title">
+                      <h3>Étudiants avec PFE</h3>
+                      <span className="pfes-students-count">
+                        {filteredEtudiantsAvecPfe.length} / {etudiantsAvecPfe.length}
+                      </span>
+                    </div>
+                    <input
+                      type="search"
+                      className="pfes-students-search"
+                      placeholder="Rechercher nom, CIN, sujet..."
+                      value={searchEtudiantsAvec}
+                      onChange={(e) => setSearchEtudiantsAvec(e.target.value)}
+                    />
+                  </div>
+                  <div className="pfes-students-list-body">
+                    {etudiantsAvecPfe.length === 0 ? (
+                      <p className="pfes-students-empty">Aucun étudiant n&apos;est encore affecté à un PFE.</p>
+                    ) : filteredEtudiantsAvecPfe.length === 0 ? (
+                      <p className="pfes-students-empty">Aucun résultat pour cette recherche.</p>
+                    ) : (
+                      <div className="pfes-students-scroll">
+                        <table className="table pfes-students-table">
+                          <thead>
+                            <tr>
+                              <th>ID</th>
+                              <th>Nom</th>
+                              <th>Prénom</th>
+                              <th>CIN</th>
+                              <th>PFE</th>
+                              <th>Sujet</th>
+                              <th>Encadrant</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredEtudiantsAvecPfe.map((etudiant) => (
+                              <tr key={`avec-pfe-${etudiant.idEtudiant}`}>
+                                <td>{etudiant.idEtudiant}</td>
+                                <td title={etudiant.nom_fr || etudiant.nom || '—'}>
+                                  {etudiant.nom_fr || etudiant.nom || '—'}
+                                </td>
+                                <td title={etudiant.prenom_fr || etudiant.prenom || '—'}>
+                                  {etudiant.prenom_fr || etudiant.prenom || '—'}
+                                </td>
+                                <td>{etudiant.cin || '—'}</td>
+                                <td>{etudiant.pfeId}</td>
+                                <td title={etudiant.pfeSujet || '—'}>{etudiant.pfeSujet || '—'}</td>
+                                <td title={etudiant.encadrantLabel}>{etudiant.encadrantLabel}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="table-card pfes-students-list-card pfes-students-list-card--sans">
+                  <div className="card-header pfes-students-card-header">
+                    <div className="pfes-students-card-title">
+                      <h3>Étudiants sans PFE</h3>
+                      <span className="pfes-students-count">
+                        {filteredEtudiantsSansPfe.length} / {etudiantsSansPfe.length}
+                      </span>
+                    </div>
+                    <input
+                      type="search"
+                      className="pfes-students-search"
+                      placeholder="Rechercher nom, CIN, groupe..."
+                      value={searchEtudiantsSans}
+                      onChange={(e) => setSearchEtudiantsSans(e.target.value)}
+                    />
+                  </div>
+                  <div className="pfes-students-list-body">
+                    {etudiantsSansPfe.length === 0 ? (
+                      <p className="pfes-students-empty">Tous les étudiants sont déjà affectés à un PFE.</p>
+                    ) : filteredEtudiantsSansPfe.length === 0 ? (
+                      <p className="pfes-students-empty">Aucun résultat pour cette recherche.</p>
+                    ) : (
+                      <div className="pfes-students-scroll">
+                        <table className="table pfes-students-table">
+                          <thead>
+                            <tr>
+                              <th>ID</th>
+                              <th>Nom</th>
+                              <th>Prénom</th>
+                              <th>CIN</th>
+                              <th>Spécialité</th>
+                              <th>Groupe</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredEtudiantsSansPfe.map((etudiant) => (
+                              <tr key={`sans-pfe-${etudiant.idEtudiant}`}>
+                                <td>{etudiant.idEtudiant}</td>
+                                <td title={etudiant.nom_fr || etudiant.nom || '—'}>
+                                  {etudiant.nom_fr || etudiant.nom || '—'}
+                                </td>
+                                <td title={etudiant.prenom_fr || etudiant.prenom || '—'}>
+                                  {etudiant.prenom_fr || etudiant.prenom || '—'}
+                                </td>
+                                <td>{etudiant.cin || '—'}</td>
+                                <td title={etudiant.specialite_detail?.nom || etudiant.specialite || '—'}>
+                                  {etudiant.specialite_detail?.nom || etudiant.specialite || '—'}
+                                </td>
+                                <td title={etudiant.groupe || '—'}>{etudiant.groupe || '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}

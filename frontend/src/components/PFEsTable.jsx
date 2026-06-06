@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './Table.css';
+import DetailsModal from './DetailsModal';
 
 function PFEsTable({
   pfes,
@@ -12,6 +13,9 @@ function PFEsTable({
   disableActions = false,
   filterBy = ['Tous les champs'],
 }) {
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedPFE, setSelectedPFE] = useState(null);
+  
   const safePFEs = Array.isArray(pfes) ? pfes : [];
 
   const maxFor = (matricule) => (getEncadrantMaxGroupes ? getEncadrantMaxGroupes(matricule) : 5);
@@ -46,7 +50,7 @@ function PFEsTable({
             fontSize: '13px'
           }}>
             <div style={{ fontWeight: 'bold', color: '#1e293b' }}>
-              {etudiant.nom} {etudiant.prenom}
+              {etudiant.nom_fr || etudiant.nom} {etudiant.prenom_fr || etudiant.prenom}
             </div>
             <div style={{ color: '#64748b', fontSize: '11px' }}>
               CIN: {etudiant.cin} • {etudiant.email}
@@ -58,6 +62,8 @@ function PFEsTable({
   };
 
   return (
+    <>
+    <div className="table-wrapper">
     <table className="table">
       <thead>
         <tr>
@@ -88,6 +94,16 @@ function PFEsTable({
             <td>
               {!disableActions ? (
                 <>
+                  <span
+                    className="view-icon"
+                    onClick={() => {
+                      setSelectedPFE(pfe);
+                      setShowDetailsModal(true);
+                    }}
+                    title="Voir les détails"
+                  >
+                    👁️
+                  </span>
                   <span className="icon edit-icon" onClick={() => onEdit(pfe)}>
                     ✏️
                   </span>
@@ -129,6 +145,27 @@ function PFEsTable({
         ))}
       </tbody>
     </table>
+    </div>
+    <DetailsModal
+      isOpen={showDetailsModal}
+      onClose={() => {
+        setShowDetailsModal(false);
+        setSelectedPFE(null);
+      }}
+      title={selectedPFE ? `Détails PFE #${selectedPFE.idPfe}` : 'Détails'}
+      details={selectedPFE ? {
+        'ID PFE': selectedPFE.idPfe,
+        'Sujet': selectedPFE.sujet,
+        'Durée (mois)': selectedPFE.duree,
+        'Lieu de stage': selectedPFE.lieu_stage,
+        'Type de projet': selectedPFE.type_projet,
+        'Spécialité': selectedPFE.specialite,
+        'Étudiants': selectedPFE.etudiants_detail?.map(e => `${e.nom_fr || e.nom} ${e.prenom_fr || e.prenom}`).join(', ') || 'Aucun',
+        'Encadrant': selectedPFE.encadrant_detail ? `${selectedPFE.encadrant_detail.nom} ${selectedPFE.encadrant_detail.prenom}` : '-',
+        'Type contrat (enc.)': selectedPFE.encadrant_detail?.typeContrat || '—',
+      } : {}}
+    />
+    </>
   );
 }
 
